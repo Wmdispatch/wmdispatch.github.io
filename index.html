@@ -3429,6 +3429,24 @@ document.addEventListener('DOMContentLoaded', () => {
 // Camera captures already go through canvas.toDataURL(...,0.88). Gallery imports
 // did not — a 12 MP phone photo was stored verbatim in IndexedDB and re-embedded
 // into every report render. This re-encodes them to photoMaxEdge before storage.
+// v41: photos are stored as WebP (about half the size of JPEG at the same
+// clarity), longest side up to 2048 px. Falls back to JPEG on browsers that
+// cannot write WebP.
+const PHOTO_EDGE = 2048, PHOTO_Q = 0.82;
+function encodeCanvasPhoto(c) {
+  const w = c.toDataURL('image/webp', PHOTO_Q);
+  return w.startsWith('data:image/webp') ? w : c.toDataURL('image/jpeg', PHOTO_Q);
+}
+function shrinkCanvas(src, maxEdge) {
+  const w = src.width, h = src.height, k = Math.min(1, maxEdge / Math.max(w, h));
+  if (k >= 1) return src;
+  const c = document.createElement('canvas');
+  c.width = Math.round(w * k); c.height = Math.round(h * k);
+  const cx = c.getContext('2d'); cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+  cx.drawImage(src, 0, 0, c.width, c.height);
+  return c;
+}
+
 function downscaleDataUrl(dataUrl, maxEdge, quality) {
   return new Promise(resolve => {
     if (!maxEdge) return resolve(dataUrl);                 // "Original" setting
@@ -3439,14 +3457,16 @@ function downscaleDataUrl(dataUrl, maxEdge, quality) {
           let w = img.naturalWidth, h = img.naturalHeight;
           if (!w || !h) return resolve(dataUrl);
           const scale = Math.min(1, maxEdge / Math.max(w, h));
-          if (scale >= 1) return resolve(dataUrl);         // already small enough
+          // Small enough already: keep it unless re-encoding saves real space.
+          if (scale >= 1 && dataUrl.length < 340000) return resolve(dataUrl);
           w = Math.round(w * scale); h = Math.round(h * scale);
           const c = document.createElement('canvas');
           c.width = w; c.height = h;
           const cx = c.getContext('2d');
           cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
           cx.drawImage(img, 0, 0, w, h);
-          resolve(c.toDataURL('image/jpeg', quality || 0.82));
+          const out = encodeCanvasPhoto(c);
+          resolve(out.length < dataUrl.length ? out : dataUrl);
         } catch (e) { resolve(dataUrl); }                  // never lose the photo
       };
       img.onerror = () => resolve(dataUrl);
@@ -7262,7 +7282,7 @@ function captureFrame() {
     showToast('The camera gave a blank picture. Wait a moment and try again, or use the phone camera.');
     return;
   }
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  const dataUrl = encodeCanvasPhoto(shrinkCanvas(canvas, PHOTO_EDGE));
   camCapturedPhotos.push({ src: dataUrl });
   warnPhotoQuality(dataUrl);
   autoSaveCapturedPhoto(dataUrl);   // v29: also write it out to the device
