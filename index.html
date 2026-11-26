@@ -1589,7 +1589,8 @@
           </div>
           <div id="srvOnRow" style="display:none;">
             <div class="btn-row"><button class="btn-secondary" onclick="srvSync(true)">Send now</button>
-            <button class="btn-secondary danger-btn" onclick="srvDisconnect()">Disconnect</button></div>
+            <button class="btn-secondary" onclick="srvRestore()">Restore from server</button></div>
+            <div class="btn-row"><button class="btn-secondary danger-btn" onclick="srvDisconnect()">Disconnect</button></div>
           </div>
         </div>
         <div class="toggle-sub-text" style="margin:12px 0 9px;">Or keep a backup file yourself:</div>
@@ -8159,7 +8160,25 @@ function srvPayload(rec, withAll) {
   const ok = its.filter(x => x.status === 'ok').length;
   const result = !fails.length ? 'Fit for use' : (high ? 'Not fit for use' : 'Fit with conditions');
   const day = String(d.date || rec.date || '').slice(0, 10);
+  // Full copy for restoring a phone: signature removed, every picture
+  // replaced by a short reference to the photo stored once on the server.
+  const issueSigs = new Set(), extra = [];
+  fails.forEach(f => (f.it.photos || []).forEach(p => { const x = typeof photoSrc === 'function' ? photoSrc(p) : p; if (x) issueSigs.add(srvSig(x)); }));
+  const strip = v => {
+    if (typeof v === 'string' && /^data:image\//.test(v) && v.length > 200) {
+      const sig = srvSig(v);
+      if (!issueSigs.has(sig) && !extra.some(e => e.sig === sig)) extra.push({ sig, data: (withAll || !sent[sig]) ? v : null });
+      return 'ayn-sig:' + sig;
+    }
+    if (Array.isArray(v)) return v.map(strip);
+    if (v && typeof v === 'object') { const o = {}; Object.keys(v).forEach(k => { o[k] = strip(v[k]); }); return o; }
+    return v;
+  };
+  const copy = Object.assign({}, rec); delete copy.signature;
+  if (copy.inspData) { copy.inspData = Object.assign({}, copy.inspData); delete copy.inspData.signature; }
+  const full = JSON.stringify(strip(copy));
   return {
+    full, extraPhotos: extra,
     reportId: rec.id, reportNum: rec.reportNum || d.reportNum || '', date: day,
     plate: d.truckNo || rec.truckNo || '', fsl: d.fsl || '', vehType: d.vehType || rec.vehType || '', make: d.make || '',
     driver: (d.driverName && d.driverName !== '—') ? d.driverName : '', site: (d.location && d.location !== '—') ? d.location : '',
@@ -8187,7 +8206,7 @@ function srvNoteChange(key) {
 (function srvHookStorage() {
   if (!window.storage || window.storage.__srv) return;
   const s = window.storage, set = s.set.bind(s);
-  s.set = async (k, v) => { const r = await set(k, v); if (!(typeof gd !== 'undefined' && gd.restoring)) srvNoteChange(k); return r; };
+  s.set = async (k, v) => { const r = await set(k, v); if (!srv.restoring && !(typeof gd !== 'undefined' && gd.restoring)) srvNoteChange(k); return r; };
   s.__srv = true;
 })();
 
@@ -8207,7 +8226,9 @@ async function srvSync(fromTap) {
           let res = await srvCall(conn, { action: 'submit', report: srvPayload(rec, false) });
           if (res.need && res.need.length) res = await srvCall(conn, { action: 'submit', report: srvPayload(rec, true) });
           const s2 = srvJson(SRV_SENT, {});
-          srvPayload(rec, true).issueList.forEach(x => x.photos.forEach(p => { s2[p.sig] = 1; }));
+          const all = srvPayload(rec, true);
+          all.issueList.forEach(x => x.photos.forEach(p => { s2[p.sig] = 1; }));
+          all.extraPhotos.forEach(p => { s2[p.sig] = 1; });
           srvSave(SRV_SENT, s2);
           sent++;
         }
@@ -8242,6 +8263,50 @@ async function srvConnect() {
   const q = srvJson(SRV_QUEUE, {}); (list.keys || []).forEach(k => { q[k] = 1; }); srvSave(SRV_QUEUE, q);
   showToast('Connected. Sending your reports…');
   srvRender(); srvSync(true);
+}
+
+// New or reset phone: bring every report on the server back onto this phone.
+async function srvRestore() {
+  const conn = srvConn();
+  if (!conn) { showToast('Connect with the PHONE code first'); return; }
+  if (!navigator.onLine) { showToast('Restoring needs internet'); return; }
+  let added = 0, kept = 0, missing = 0;
+  try {
+    const list = (await srvCall(conn, { action: 'list' })).reports || [];
+    if (!list.length) { showToast('No reports on the server yet'); return; }
+    const have = new Set(((await window.storage.list('insp:')) || {}).keys || []);
+    srv.restoring = true;
+    const cache = {};
+    for (const r of list) {
+      if (have.has(r.reportId)) { kept++; continue; }
+      showToast('Restoring ' + (added + 1) + ' of ' + (list.length - kept) + '…');
+      const got = await srvCall(conn, { action: 'report', reportId: r.reportId });
+      const sent = srvJson(SRV_SENT, {});
+      const fill = async v => {
+        if (typeof v === 'string' && v.startsWith('ayn-sig:')) {
+          const sig = v.slice(8), ph = got.photos[sig];
+          if (!ph || ph.archived) { missing++; return null; }
+          if (!cache[sig]) { const j = await srvCall(conn, { action: 'photo', id: ph.id }); cache[sig] = 'data:' + j.mime + ';base64,' + j.data; }
+          sent[sig] = 1;
+          return cache[sig];
+        }
+        if (Array.isArray(v)) return (await Promise.all(v.map(fill))).filter(x => x !== null);
+        if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) o[k] = await fill(v[k]); return o; }
+        return v;
+      };
+      const rec = await fill(JSON.parse(got.full));
+      if (!rec || rec.id !== r.reportId) continue;
+      await window.storage.set(r.reportId, JSON.stringify(rec));
+      srvSave(SRV_SENT, sent);
+      added++;
+    }
+  } catch (e) {
+    showToast('Restore stopped: ' + (e.message || e));
+  } finally { srv.restoring = false; }
+  if (typeof seedReportCountersFromRecords === 'function') await seedReportCountersFromRecords();
+  if (typeof renderDrawer === 'function') renderDrawer();
+  if (added || kept) showToast('Restored ' + added + ' report' + (added === 1 ? '' : 's') + (kept ? ', ' + kept + ' already on this phone' : '') +
+                               (missing ? '. ' + missing + ' photo' + (missing === 1 ? ' was' : 's were') + ' moved to the company computer' : ''));
 }
 
 function srvDisconnect() {
