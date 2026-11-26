@@ -7363,7 +7363,7 @@ function pbOpenCamera() {
 // Google only hands a browser app a 1-hour key, and asking for a new one needs
 // a tap. So: with a live key, changes upload a few seconds after each save.
 // Without one, they wait in a queue and the home screen shows "Back up now".
-const GDRIVE_CLIENT_ID = '';   // set once the Google Cloud client exists
+const GDRIVE_CLIENT_ID = '945717977827-fnh2kop4hobc0k2jt2q9qg9hui95e7ek.apps.googleusercontent.com';   // set once the Google Cloud client exists
 const GD_SCOPE   = 'https://www.googleapis.com/auth/drive.file';
 const GD_STATE   = 'aynDrive';        // {on, email, folderId, files:{key:{id,savedAt}}, last}
 const GD_QUEUE   = 'aynDriveQueue';   // {key: 'up' | 'del'}
