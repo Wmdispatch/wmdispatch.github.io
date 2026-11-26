@@ -1109,6 +1109,63 @@
     #gdOffRow:empty { display:none; }
   }
   @media print { .gd-bar { display:none !important; } }
+
+  /* ══════════════ v38 REPORT DOCUMENT (company styles) ══════════════ */
+  .rdoc { background:#fff; color:#111; font-size:11px; line-height:1.35; padding:12px; border-radius:10px; border:1px solid var(--border);
+          -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .rdoc table { border-collapse:collapse; width:100%; }
+  .rdoc td, .rdoc th { border:.5pt solid #000; padding:4px 6px; vertical-align:top; background:#fff; color:#111; text-align:left; }
+  .rdoc th { color:#fff !important; font-weight:700; font-size:10px; }
+  .rdoc .rd-c { text-align:center; } .rdoc .rd-lab { font-size:9.5px; color:#444; } .rdoc .rd-up { text-transform:uppercase; letter-spacing:.3px; }
+  .rdoc .rd-sub { font-size:9px; color:#555; margin-top:1px; } .rdoc .rd-act { font-weight:700; margin-top:2px; }
+  .rdoc .rd-h2 { font-size:11.5px; font-weight:800; margin:12px 0 5px; text-transform:uppercase; letter-spacing:.6px; }
+  .rdoc .rd-head { display:flex; align-items:center; gap:10px; border-bottom:2pt solid; padding-bottom:7px; margin-bottom:9px; flex-wrap:wrap; }
+  .rdoc .rd-logo { height:32px; max-width:150px; object-fit:contain; } .rdoc .rd-coname { font-size:17px; font-weight:800; letter-spacing:1px; }
+  .rdoc .rd-title { flex:1; min-width:150px; } .rdoc .rd-t1 { font-size:14px; font-weight:800; letter-spacing:.3px; } .rdoc .rd-t2 { font-size:10px; color:#444; }
+  .rdoc .rd-docbox { width:auto !important; min-width:190px; } .rdoc .rd-docbox td { padding:2px 6px; font-size:10px; } .rdoc .rd-repno { cursor:pointer; }
+  .rdoc .rd-res { display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
+  .rdoc .rd-box { flex:1; min-width:60px; border:.5pt solid #000; padding:5px 7px; } .rdoc .rd-n { font-size:18px; font-weight:800; }
+  .rdoc .rd-verdict { flex:1.8; min-width:150px; border:1.5pt solid; padding:5px 8px; } .rdoc .rd-vl { font-size:14px; font-weight:800; } .rdoc .rd-vs { font-size:9.5px; }
+  .rdoc .rd-pri { font-weight:800; cursor:pointer; }
+  .rdoc .rd-tg { display:grid; grid-template-columns:repeat(auto-fit,minmax(40%,1fr)); gap:3px; }
+  .rdoc .rd-thumbs img { width:100%; height:64px; object-fit:cover; display:block; border:.5pt solid #999; }
+  .rdoc .rd-grid { display:grid; gap:8px; } .rdoc .rd-grid.c2 { grid-template-columns:1fr 1fr; } .rdoc .rd-grid.c3 { grid-template-columns:1fr 1fr 1fr; }
+  .rdoc .rd-fig { margin:0; border:.5pt solid #000; padding:4px; break-inside:avoid; } .rdoc .rd-fig img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
+  .rdoc .rd-fig figcaption { font-size:9.5px; margin-top:3px; }
+  .rdoc .rd-sigcell { height:42px; } .rdoc .rd-sigcell img { max-height:40px; max-width:100%; }
+  .rdoc .rd-card { display:flex; gap:8px; border:.5pt solid #000; border-left:4pt solid; padding:7px; margin-bottom:7px; }
+  .rdoc .rd-card-tx { flex:1; } .rdoc .rd-card-h { font-size:12.5px; font-weight:800; margin:2px 0 4px; } .rdoc .rd-card-p { margin-top:5px; font-size:9.5px; font-weight:800; cursor:pointer; }
+  .rdoc .rd-card-ph { width:40%; display:grid; grid-template-columns:repeat(auto-fit,minmax(45%,1fr)); gap:4px; align-content:start; } .rdoc .rd-card-ph img { width:100%; aspect-ratio:4/3; object-fit:cover; border:.5pt solid #000; display:block; }
+  .rdoc .rd-banner { color:#fff; padding:8px 11px; display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:9px; }
+  .rdoc .rd-bn { text-align:right; font-size:10px; } .rdoc .rd-bn b { font-size:16px; }
+  .rdoc .rd-sec { font-weight:800; font-size:10px; text-transform:uppercase; letter-spacing:.4px; }
+  .rdoc .rd-none { margin:6px 0; font-weight:600; }
+  .rdoc .rd-foot { display:flex; justify-content:space-between; gap:8px; font-size:8.5px; color:#555; margin-top:12px; border-top:.5pt solid #999; padding-top:4px; }
+  .rdoc .rd-keep, .rdoc tr { break-inside:avoid; }
+  body.rdoc-on #reportBanner, body.rdoc-on #screen-report .report-company, body.rdoc-on #reportMeta, body.rdoc-on #statsBox,
+  body.rdoc-on #reportContent, body.rdoc-on #reportDriverBehavior, body.rdoc-on #reportSignature,
+  body.rdoc-on #printTemplateGrid, body.rdoc-on #printTemplateCard > h3, body.rdoc-on #printTemplateCard > h3 + div { display:none !important; }
+  body.has-sig .sig-wrap { display:none !important; }
+  .rfmt-sep { width:100%; font-size:10px; color:var(--muted); margin-top:4px; }
+  .co-field { margin-bottom:10px; } .co-field label { display:block; font-size:12px; font-weight:700; margin-bottom:4px; }
+  .co-field input[type=text] { width:100%; padding:10px 11px; border:1px solid var(--border); border-radius:10px; font-size:14px; background:#fff; }
+  .co-prev { border:1px dashed var(--border); border-radius:10px; min-height:56px; display:flex; align-items:center; justify-content:center; background:#fff; padding:8px; margin-bottom:8px; color:var(--muted); font-size:12px; }
+  .co-prev img { max-height:54px; max-width:100%; }
+  #sigPad { width:100%; height:130px; background:#fff; border:1px solid var(--border); border-radius:10px; touch-action:none; display:block; }
+  .co-styles { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .co-style { padding:10px; border:1px solid var(--border); border-radius:10px; background:#fff; font-weight:700; font-size:12.5px; cursor:pointer; text-align:left; }
+  .co-style.on { border-color:var(--accent); box-shadow:0 0 0 2px var(--tint); color:var(--accent); }
+  @media print {
+    #toast, .gd-bar { display:none !important; }
+    body.print-doc #screen-report > :not(.report-body), body.print-doc .report-body > :not(#reportDoc) { display:none !important; }
+    body.print-doc > *:not(:has(#reportDoc)) { display:none !important; }
+    html:has(body.print-doc), body.print-doc, body.print-doc #screen-report, body.print-doc .report-body { background:#fff !important; padding:0 !important; margin:0 !important; border:none !important; box-shadow:none !important; }
+    body.print-doc .rdoc { border:none; padding:0; border-radius:0; font-size:9.5pt; }
+    body.print-doc .rdoc .rd-thumbs img { height:20mm; }
+    body.print-doc .rdoc .rd-card-ph img { max-height:34mm; }
+    body.print-doc .rdoc .rd-photos-page { break-before:page; }
+    @page { margin:12mm; }
+  }
 </style>
 
 </head>
@@ -1333,11 +1390,46 @@
   </div>
   <div class="sheet-tabs">
     <button class="sheet-tab on" id="stab-prefs" onclick="settingsTab('prefs')">Preferences</button>
+    <button class="sheet-tab" id="stab-company" onclick="settingsTab('company')">Company &amp; signature</button>
     <button class="sheet-tab" id="stab-fleet" onclick="settingsTab('fleet')">Fleet data</button>
     <button class="sheet-tab" id="stab-app" onclick="settingsTab('app')">Install &amp; offline</button>
   </div>
   <div class="sheet-body">
 
+    <div class="sheet-pane" id="spane-company">
+      <div class="sheet-sec">
+        <h4>Company on reports</h4>
+        <div class="toggle-sub-text" style="margin-bottom:10px;">Kept on this phone only. Change any time; new and reopened reports use it.</div>
+        <div class="co-field"><label for="coName">Company name</label><input type="text" id="coName" placeholder="Company name" onchange="saveCompanyField('name', this.value)"></div>
+        <div class="co-field"><label>Logo</label><div class="co-prev" id="coLogoPrev"></div>
+          <div class="btn-row"><label class="btn-secondary" for="coLogoFile" style="text-align:center;cursor:pointer;">Choose logo picture</label>
+          <button class="btn-secondary danger-btn" id="coLogoRm" onclick="removeCompanyLogo()">Remove logo</button></div>
+          <input type="file" id="coLogoFile" accept="image/*" style="display:none;" onchange="loadCompanyLogo(this)"></div>
+        <div class="co-field"><label for="coTitle">Report title</label><input type="text" id="coTitle" onchange="saveCompanyField('title', this.value)"></div>
+        <div class="co-field"><label for="coDept">Department line</label><input type="text" id="coDept" onchange="saveCompanyField('dept', this.value)"></div>
+        <div class="co-field"><label for="coColor">Header colour</label><input type="color" id="coColor" onchange="saveCompanyField('color', this.value)" style="width:64px;height:40px;border:none;background:none;"></div>
+      </div>
+      <div class="sheet-sec">
+        <h4>Default report style</h4>
+        <div class="co-styles">
+          <button class="co-style" data-s="S2" onclick="setDefaultDocStyle('S2')">Compact</button>
+          <button class="co-style" data-s="S1" onclick="setDefaultDocStyle('S1')">Audit form</button>
+          <button class="co-style" data-s="S3" onclick="setDefaultDocStyle('S3')">Cards</button>
+          <button class="co-style" data-s="S4" onclick="setDefaultDocStyle('S4')">Full checklist</button>
+        </div>
+      </div>
+      <div class="sheet-sec">
+        <h4>Your signature</h4>
+        <div class="toggle-sub-text" style="margin-bottom:8px;">Sign once. It is placed on every report automatically. It stays on this phone and is never sent to the workshop or any server.</div>
+        <div class="co-prev" id="sigPrev"></div>
+        <canvas id="sigPad" width="600" height="200" aria-label="Draw your signature"></canvas>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn-secondary" onclick="clearSigPad()">Clear</button>
+          <button class="btn-secondary" onclick="saveSigPad()">Save signature</button>
+        </div>
+        <div class="btn-row"><button class="btn-secondary danger-btn" id="sigRmBtn" onclick="removeSignature()">Remove saved signature</button></div>
+      </div>
+    </div>
     <div class="sheet-pane on" id="spane-prefs">
       <div class="sheet-sec">
         <h4>Display</h4>
@@ -1563,7 +1655,24 @@
   <div class="format-screen-title">Select Report Format</div>
   <div class="format-screen-sub">Choose how you want the report to look. Tap one to set as default.</div>
 
-  <div class="format-full-card selected" data-fmt="A" onclick="selectFormat('A')">
+  <div class="format-full-card" data-fmt="S2" onclick="selectFormat('S2')">
+    <div class="format-card-head"><div class="format-card-letter">C</div><div class="format-card-name">Compact</div></div>
+    <div class="format-card-desc">One page. Each issue with its finding, action, priority and photos in one table. Company logo, result and your signature.</div>
+  </div>
+  <div class="format-full-card" data-fmt="S1" onclick="selectFormat('S1')">
+    <div class="format-card-head"><div class="format-card-letter">A</div><div class="format-card-name">Audit form</div></div>
+    <div class="format-card-desc">Findings table, section summary, then a photo page with numbered figures. Sign-off at the end.</div>
+  </div>
+  <div class="format-full-card" data-fmt="S3" onclick="selectFormat('S3')">
+    <div class="format-card-head"><div class="format-card-letter">C</div><div class="format-card-name">Cards</div></div>
+    <div class="format-card-desc">Coloured result banner and one card per issue with its photo beside it. Easy for drivers and supervisors.</div>
+  </div>
+  <div class="format-full-card" data-fmt="S4" onclick="selectFormat('S4')">
+    <div class="format-card-head"><div class="format-card-letter">F</div><div class="format-card-name">Full checklist</div></div>
+    <div class="format-card-desc">Every point listed as OK or Issue, then findings and photos. Best as audit evidence.</div>
+  </div>
+  <div class="format-screen-sub" style="margin:14px 0 8px;">Classic formats</div>
+  <div class="format-full-card" data-fmt="A" onclick="selectFormat('A')">
     <div class="format-card-head">
       <div class="format-card-letter">A</div>
       <div class="format-card-name">Standard Detail</div>
@@ -1706,12 +1815,18 @@
   </div>
   <div class="report-fmt-bar" id="reportFmtBar">
     <span class="rfmt-label">Format:</span>
-    <button class="rfmt-btn active" data-rfmt="A" onclick="switchReportFormat('A')">A. Standard</button>
+    <button class="rfmt-btn" data-rfmt="S2" onclick="switchReportFormat('S2')">Compact</button>
+    <button class="rfmt-btn" data-rfmt="S1" onclick="switchReportFormat('S1')">Audit form</button>
+    <button class="rfmt-btn" data-rfmt="S3" onclick="switchReportFormat('S3')">Cards</button>
+    <button class="rfmt-btn" data-rfmt="S4" onclick="switchReportFormat('S4')">Full checklist</button>
+    <span class="rfmt-sep">Classic</span>
+    <button class="rfmt-btn" data-rfmt="A" onclick="switchReportFormat('A')">A. Standard</button>
     <button class="rfmt-btn" data-rfmt="B" onclick="switchReportFormat('B')">B. Table</button>
     <button class="rfmt-btn" data-rfmt="C" onclick="switchReportFormat('C')">C. Issues Only</button>
     <button class="rfmt-btn" data-rfmt="D" onclick="switchReportFormat('D')">D. Full Summary</button>
   </div>
   <div class="report-body">
+    <div id="reportDoc"></div>
     <div class="meta-grid" id="reportMeta"></div>
     <div id="statsBox"></div>
     <div id="reportContent"></div>
@@ -2507,7 +2622,9 @@ function startInspection() {
     vehType: vehRaw || veh.name,
     vehIcon: veh.icon,
     inspectorName: document.getElementById('inspectorName').value || '—',
-    location: document.getElementById('location').value || '—',    date: document.getElementById('inspDate').value || new Date().toISOString().slice(0,16),
+    location: document.getElementById('location').value || '—',
+    fsl: (document.getElementById('fslInput') && document.getElementById('fslInput').value.trim()) || '',
+    make: (document.getElementById('vehMake') && document.getElementById('vehMake').value.trim()) || '',    date: document.getElementById('inspDate').value || new Date().toISOString().slice(0,16),
     odometer: (document.getElementById('odometer') && document.getElementById('odometer').value.trim()) || '',
   };
 
@@ -3911,10 +4028,11 @@ function printWithTemplate() {
   // Remove any existing template classes
   document.body.classList.remove('print-light','print-minimal','print-official','print-dark');
   document.body.classList.add('print-' + currentPrintTemplate);
+  document.body.classList.toggle('print-doc', document.body.classList.contains('rdoc-on'));
   window.print();
   // Restore after print
   setTimeout(() => {
-    document.body.classList.remove('print-light','print-minimal','print-official','print-dark');
+    document.body.classList.remove('print-light','print-minimal','print-official','print-dark','print-doc');
   }, 2000);
 }
 
@@ -4015,7 +4133,9 @@ async function reportNumberExists(num) {
 }
 
 // ─── FORMAT STATE ──────────────────────────────────────────────────────────────
-let selectedFormat = localStorage.getItem('defaultReportFormat') || 'A';
+// v38: the company styles arrive with Compact (S2) as the default, once.
+try { if (!localStorage.getItem('rdocDefaultSet')) { localStorage.setItem('defaultReportFormat', 'S2'); localStorage.setItem('rdocDefaultSet', '1'); } } catch (e) {}
+let selectedFormat = localStorage.getItem('defaultReportFormat') || 'S2';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // v30 — VEHICLE / DRIVER RATINGS  (ported from rating_feature_demo.html PART 3)
@@ -4292,7 +4412,7 @@ async function persistCurrentReportItems() {
     rec.items = items.map(it => ({
       name: it.name, section: it.section, status: it.status,
       note: it.note, photos: it.photos || [], specific: it.specific,
-      custom: !!it.custom, autoNote: !!it.autoNote
+      custom: !!it.custom, autoNote: !!it.autoNote, priority: it.priority || ''
     }));
     if (rec.inspData) rec.inspData = {...inspData};
     await window.storage.set(inspData.id, JSON.stringify(rec));
@@ -4303,6 +4423,16 @@ async function persistCurrentReportItems() {
 
 // ─── REPORT BUILDER ────────────────────────────────────────────────────────────
 function buildReport(fmt) {
+  // v38: company styles render one document; the classic parts are hidden.
+  const docBox = document.getElementById('reportDoc');
+  document.body.classList.toggle('has-sig', !!savedSignature());
+  if (isDocStyle(fmt)) {
+    document.body.classList.add('rdoc-on');
+    if (docBox) docBox.innerHTML = buildReportDoc(fmt);
+    return;
+  }
+  document.body.classList.remove('rdoc-on');
+  if (docBox) docBox.innerHTML = '';
   const failItems = items.filter(x=>x.status==='fail');
   const okItems = items.filter(x=>x.status==='ok');
   const dateStr = reportDateStr();               // v29: time is optional, date always shown
@@ -4371,6 +4501,7 @@ async function editReportId() {
     if (!confirm('⚠️ Report number "' + trimmed + '" is already used by another saved inspection.\n\nUse it anyway (creates a duplicate)?')) return;
   }
   inspData.reportNum = trimmed;
+  if (isDocStyle(selectedFormat)) buildReport(selectedFormat);
   // Update display
   document.getElementById('reportId').innerHTML = `<span class="report-id-num" title="Tap to edit report number">${esc(trimmed)}</span>`;
   // Update meta grid cell
@@ -4498,12 +4629,14 @@ async function saveCurrentInspection(reportNum) {
   const savedItems = items.map(it => ({
     name: it.name, section: it.section, status: it.status,
     note: it.note, photos: it.photos || [], specific: it.specific,
-    custom: !!it.custom, autoNote: !!it.autoNote   // v26
+    custom: !!it.custom, autoNote: !!it.autoNote,   // v26
+    priority: it.priority || ''                     // v38
   }));
 
   const id = 'insp:' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);  // BUG NEW-6 FIXED: added random suffix
   // F-02: capture the inspector signature (empty string if the canvas is blank)
-  const signature = getSignatureDataUrl();
+  // v38: the signature saved in Settings goes on every report automatically.
+  const signature = getSignatureDataUrl() || savedSignature();
   inspData.signature = signature;
   const rec = {
     id, reportNum, date: inspData.date,
@@ -6022,13 +6155,14 @@ function closeSettings() {
 }
 
 function settingsTab(which) {
-  ['prefs', 'fleet', 'app'].forEach(t => {
+  ['prefs', 'company', 'fleet', 'app'].forEach(t => {
     const tab = document.getElementById('stab-' + t), pane = document.getElementById('spane-' + t);
     if (tab) tab.classList.toggle('on', t === which);
     if (pane) pane.classList.toggle('on', t === which);
   });
   if (which === 'fleet') renderFleetList();
   if (which === 'app') renderInstallDiag();
+  if (which === 'company') { renderCompanySettings(); initSigPad(); }
 }
 
 // ─── fleet manager ──────────────────────────────────────────────────────────
@@ -6803,7 +6937,7 @@ function restoreSessionSnapshot() {
     // Photos (item photos + photo bank) are hydrated asynchronously from the
     // IndexedDB full snapshot once the screen is back up — see below.
     photoBank = [];
-    selectedFormat = snap.selectedFormat || 'A';
+    selectedFormat = snap.selectedFormat || 'S2';
 
     const veh = VEHICLES[inspData.vehId] || {name: inspData.vehType, icon:'🚛'};
     document.getElementById('headerSub').textContent = `${inspData.truckNo} · ${inspData.vehType}`;
@@ -7682,6 +7816,259 @@ window.addEventListener('online', () => { gdRender(); gdSync(false); });
 window.addEventListener('offline', gdRender);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { gdRender(); gdSync(false); } });
 setTimeout(() => { gdRender(); gdSync(false); }, 1500);
+
+
+// ════════════════════════════════════════════════════════════════════════
+// v38 — COMPANY REPORT STYLES (S1 Audit form, S2 Compact, S3 Cards, S4 Full record)
+// ════════════════════════════════════════════════════════════════════════
+// Company name, logo, department line, header colour and the inspector's
+// signature are kept on this phone only (localStorage). None of it is in the
+// app's code, so the public repository never holds them.
+const CO_KEY  = 'aynCompany';
+const SIG_KEY = 'aynSignature';
+const RDOC_STYLES = {
+  S2: 'Compact', S1: 'Audit form', S3: 'Cards', S4: 'Full checklist'
+};
+
+function coGet() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(CO_KEY)) || {}; } catch (e) {}
+  return {
+    name: c.name || '',
+    dept: c.dept != null ? c.dept : 'HSE Department · Vehicle Safety',
+    title: c.title || 'Vehicle Inspection Report',
+    color: /^#[0-9a-f]{6}$/i.test(c.color || '') ? c.color : '#3D6AB3',
+    logo: c.logo || ''
+  };
+}
+function coSet(patch) {
+  const c = Object.assign(coGet(), patch);
+  try { localStorage.setItem(CO_KEY, JSON.stringify(c)); }
+  catch (e) { showToast('Could not save: the logo may be too large'); return false; }
+  return true;
+}
+function savedSignature() { try { return localStorage.getItem(SIG_KEY) || ''; } catch (e) { return ''; } }
+
+function isDocStyle(f) { return /^S[1-4]$/.test(String(f || '')); }
+
+// Priority: set by the inspector, otherwise read from the action wording.
+function itemPriority(it) {
+  if (it.priority && /^(High|Medium|Low)$/.test(it.priority)) return it.priority;
+  const t = String(it.note || '').toLowerCase();
+  if (/do not (operate|use)|before use|immediately|stop (work|use)|remove from service|not (safe|fit)/.test(t)) return 'High';
+  if (/next service|monitor|when convenient|routine|clean|tidy/.test(t)) return 'Low';
+  return 'Medium';
+}
+const PRI_COL = { High: '#B00020', Medium: '#A15C00', Low: '#1D7A3E' };
+
+async function cyclePriority(gi) {
+  const it = items[gi]; if (!it) return;
+  const order = ['High', 'Medium', 'Low'];
+  it.priority = order[(order.indexOf(itemPriority(it)) + 1) % 3];
+  await persistCurrentReportItems();
+  buildReport(selectedFormat);
+}
+
+function rdDate() {
+  if (!inspData || !inspData.date) return '—';
+  const d = new Date(inspData.date);
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function photoSrc(p) { return typeof p === 'string' ? p : (p && (p.src || p.data || p.dataUrl)) || ''; }
+
+function rdResult(fails) {
+  const high = fails.filter(it => itemPriority(it) === 'High').length;
+  if (!fails.length) return { label: 'FIT FOR USE', sub: 'No issues found.', col: '#1D7A3E', high };
+  if (high) return { label: 'NOT FIT FOR USE', sub: 'High-priority issues must be closed before operation.', col: '#B00020', high };
+  return { label: 'FIT WITH CONDITIONS', sub: 'Close the listed issues within the stated action.', col: '#A15C00', high };
+}
+
+function buildReportDoc(style) {
+  const co = coGet(), C = co.color;
+  const fails = items.filter(x => x.status === 'fail');
+  const oks = items.filter(x => x.status === 'ok');
+  const veh = (typeof VEHICLES !== 'undefined' && VEHICLES[inspData.vehId]) || {};
+  const res = rdResult(fails);
+  const repNo = inspData.reportNum || '';
+  const sig = inspData.signature || savedSignature();
+  const th = (t, w) => `<th style="background:${C}${w ? ';width:' + w : ''}">${t}</th>`;
+  const h2 = t => `<h2 class="rd-h2" style="color:${C}">${t}</h2>`;
+  const idx = new Map(); fails.forEach((it, k) => idx.set(it, k + 1));
+  const gi = it => items.indexOf(it);
+
+  const brand = co.logo
+    ? `<img class="rd-logo" src="${co.logo}" alt="">`
+    : (co.name ? `<div class="rd-coname" style="color:${C}">${esc(co.name)}</div>` : '');
+  const header = `<div class="rd-head" style="border-color:${C}">${brand}
+    <div class="rd-title"><div class="rd-t1">${esc(co.title.toUpperCase())}</div>${co.dept ? `<div class="rd-t2">${esc(co.dept)}</div>` : ''}</div>
+    <table class="rd-docbox"><tr><td class="rd-lab">Report no.</td><td><b class="rd-repno" onclick="editReportId()">${esc(repNo)}</b></td></tr>
+    <tr><td class="rd-lab">Date</td><td>${esc(rdDate())}</td></tr>
+    <tr><td class="rd-lab">Checklist</td><td>${esc(veh.name || inspData.vehType || '')}</td></tr></table></div>`;
+
+  const v = (x) => esc(x && x !== '—' ? x : '');
+  const details = `<table class="rd-t"><tr><th colspan="4" style="background:${C}">Vehicle and inspection details</th></tr>
+    <tr><td class="rd-lab">Unit / plate</td><td><b>${v(inspData.truckNo)}</b></td><td class="rd-lab">FSL no.</td><td>${v(inspData.fsl)}</td></tr>
+    <tr><td class="rd-lab">Vehicle type</td><td>${v(inspData.vehType)}</td><td class="rd-lab">Make</td><td>${v(inspData.make)}</td></tr>
+    <tr><td class="rd-lab">Driver / operator</td><td>${v(inspData.driverName)}</td><td class="rd-lab">Site</td><td>${v(inspData.location)}</td></tr>
+    <tr><td class="rd-lab">Inspector</td><td>${v(inspData.inspectorName)}</td><td class="rd-lab">Date</td><td>${esc(rdDate())}</td></tr></table>`;
+
+  const box = (n, l, col) => `<div class="rd-box"><div class="rd-n"${col ? ` style="color:${col}"` : ''}>${n}</div><div class="rd-lab rd-up">${l}</div></div>`;
+  const resultRow = `<div class="rd-res">${box(items.length, 'Points checked')}${box(oks.length, 'Satisfactory')}
+    ${box(fails.length, 'Issues' + (res.high ? ' (' + res.high + ' high)' : ''), fails.length ? '#B00020' : '')}
+    <div class="rd-verdict" style="border-color:${res.col};color:${res.col}"><div class="rd-lab rd-up" style="color:${res.col}">Result</div>
+    <div class="rd-vl">${res.label}</div><div class="rd-vs">${res.sub}</div></div></div>`;
+
+  const priCell = it => { const p = itemPriority(it); return `<td class="rd-c rd-pri" style="color:${PRI_COL[p]}" onclick="cyclePriority(${gi(it)})" title="Tap to change">${p}</td>`; };
+  const noteParts = it => {
+    const lines = String(it.note || '').split('\n').map(s => s.trim()).filter(Boolean);
+    return `${esc(lines[0] || 'Not compliant.')}${lines[1] ? `<div class="rd-act">${esc(lines.slice(1).join(' '))}</div>` : ''}`;
+  };
+  const findings = (mode) => {
+    if (!fails.length) return `<p class="rd-none">No issues found. All ${items.length} points satisfactory.</p>`;
+    let h = `<table class="rd-t"><tr>${th('#', '5%')}${th('Inspection point', '29%')}${th('Finding and action')}${th('Priority', '11%')}${mode ? th('Photo', mode === 'thumbs' ? '25%' : '9%') : ''}</tr>`;
+    fails.forEach(it => {
+      const n = idx.get(it), ph = (it.photos || []).map(photoSrc).filter(Boolean);
+      let pc = '';
+      if (mode === 'thumbs') pc = `<td class="rd-thumbs">${ph.length ? '<div class="rd-tg">' + ph.map(s => `<img src="${s}" alt="">`).join('') + '</div>' : '<div class="rd-c">–</div>'}</td>`;
+      else if (mode === 'ref') pc = `<td class="rd-c">${ph.length ? 'Fig. ' + n : '–'}</td>`;
+      h += `<tr class="rd-keep"><td class="rd-c">${n}</td><td><b>${esc(it.name)}</b><div class="rd-sub">${esc(it.section || '')}</div></td><td>${noteParts(it)}</td>${priCell(it)}${pc}</tr>`;
+    });
+    return h + '</table>';
+  };
+
+  const sections = [];
+  items.forEach(it => { let s = sections.find(x => x.name === it.section); if (!s) sections.push(s = { name: it.section, all: [] }); s.all.push(it); });
+  const secSummary = `<table class="rd-t"><tr>${th('Section')}${th('Points', '12%')}${th('OK', '12%')}${th('Issues', '12%')}${th('Status', '13%')}</tr>` +
+    sections.map(s => { const f = s.all.filter(x => x.status === 'fail').length, o = s.all.filter(x => x.status === 'ok').length;
+      return `<tr><td>${esc(s.name)}</td><td class="rd-c">${s.all.length}</td><td class="rd-c">${o}</td><td class="rd-c">${f}</td><td class="rd-c" style="font-weight:700;color:${f ? '#B00020' : '#1D7A3E'}">${f ? 'Issues' : (o === s.all.length ? 'Pass' : 'Pending')}</td></tr>`; }).join('') + '</table>';
+
+  const photosBlock = (cols) => {
+    let figs = '';
+    fails.forEach(it => {
+      const ph = (it.photos || []).map(photoSrc).filter(Boolean), n = idx.get(it);
+      ph.forEach((s, j) => { figs += `<figure class="rd-fig"><img src="${s}" alt=""><figcaption><b>Fig. ${n}${ph.length > 1 ? 'abcdefghij'[j] || j + 1 : ''}</b> ${esc(it.name)}</figcaption></figure>`; });
+    });
+    return figs ? `<div class="rd-photos-page">${h2('Photo evidence')}<div class="rd-grid c${cols}">${figs}</div></div>` : '';
+  };
+
+  const signoff = `<div class="rd-keep rd-signoff">${h2('Sign-off')}<table class="rd-t"><tr>${th('Role', '22%')}${th('Name')}${th('Signature', '34%')}${th('Date', '16%')}</tr>
+    <tr><td>Inspector</td><td>${v(inspData.inspectorName)}</td><td class="rd-sigcell">${sig ? `<img src="${sig}" alt="Signature">` : ''}</td><td>${esc(rdDate())}</td></tr></table></div>`;
+
+  let body = '';
+  if (style === 'S2') {
+    body = header + details + resultRow + h2('Findings, actions and photos') + findings('thumbs') + signoff;
+  } else if (style === 'S1') {
+    body = header + details + resultRow + h2('Findings and corrective actions') + findings('ref') + h2('Section summary') + secSummary + photosBlock(2) + signoff;
+  } else if (style === 'S3') {
+    const cards = fails.map(it => {
+      const p = itemPriority(it), ph = (it.photos || []).map(photoSrc).filter(Boolean);
+      return `<div class="rd-card rd-keep" style="border-left-color:${PRI_COL[p]}"><div class="rd-card-tx">
+        <div class="rd-sub">${idx.get(it)} · ${esc(it.section || '')}</div><div class="rd-card-h">${esc(it.name)}</div>
+        <div>${noteParts(it)}</div><div class="rd-card-p" style="color:${PRI_COL[p]}" onclick="cyclePriority(${gi(it)})">PRIORITY: ${p.toUpperCase()}</div></div>
+        ${ph.length ? `<div class="rd-card-ph">${ph.map(s => `<img src="${s}" alt="">`).join('')}</div>` : ''}</div>`;
+    }).join('');
+    const banner = `<div class="rd-banner" style="background:${res.col}"><div><div class="rd-vl">${res.label}</div><div class="rd-vs">${res.sub}</div></div>
+      <div class="rd-bn"><b>${oks.length} / ${items.length}</b><br>points satisfactory</div></div>`;
+    body = header + banner + details + h2('Findings') + (cards || `<p class="rd-none">No issues found. All ${items.length} points satisfactory.</p>`) + signoff;
+  } else {
+    let rows = '';
+    sections.forEach(s => {
+      rows += `<tr><td colspan="4" class="rd-sec" style="color:${C}">${esc(s.name)}</td></tr>`;
+      for (let k = 0; k < s.all.length; k += 2) {
+        rows += '<tr>' + s.all.slice(k, k + 2).map(it => {
+          const st = it.status === 'fail' ? ['ISSUE', '#B00020'] : it.status === 'ok' ? ['OK', '#1D7A3E'] : ['N/C', '#6B7D75'];
+          return `<td>${esc(it.name)}</td><td class="rd-c" style="font-weight:800;color:${st[1]};width:11%">${st[0]}</td>`;
+        }).join('') + (s.all.length - k === 1 ? '<td></td><td></td>' : '') + '</tr>';
+      }
+    });
+    body = header + details + resultRow + h2('Checklist record (all ' + items.length + ' points)') +
+      `<table class="rd-t"><tr>${th('Inspection point')}${th('Result')}${th('Inspection point')}${th('Result')}</tr>${rows}</table>` +
+      h2('Findings and corrective actions') + findings('ref') + photosBlock(3) + signoff;
+  }
+  const foot = `<div class="rd-foot"><span>${esc(co.name ? co.name + ' · ' : '')}${esc(co.title)} · ${esc(repNo)} · ${v(inspData.truckNo)}</span><span>${esc(rdDate())}</span></div>`;
+  return `<div class="rdoc rdoc-${style}">${body}${foot}</div>`;
+}
+
+// ── Settings: company details and signature ─────────────────────────────
+function renderCompanySettings() {
+  const c = coGet();
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
+  set('coName', c.name); set('coDept', c.dept); set('coTitle', c.title); set('coColor', c.color);
+  const lp = document.getElementById('coLogoPrev');
+  if (lp) lp.innerHTML = c.logo ? `<img src="${c.logo}" alt="Logo">` : '<span>No logo yet</span>';
+  const rm = document.getElementById('coLogoRm'); if (rm) rm.style.display = c.logo ? '' : 'none';
+  const sp = document.getElementById('sigPrev'), s = savedSignature();
+  if (sp) sp.innerHTML = s ? `<img src="${s}" alt="Your signature">` : '<span>No signature saved</span>';
+  const sr = document.getElementById('sigRmBtn'); if (sr) sr.style.display = s ? '' : 'none';
+  document.querySelectorAll('.co-style').forEach(b => b.classList.toggle('on', b.dataset.s === (localStorage.getItem('defaultReportFormat') || 'S2')));
+}
+function saveCompanyField(field, value) {
+  const patch = {}; patch[field] = String(value || '').trim();
+  if (field === 'color' && !/^#[0-9a-f]{6}$/i.test(patch.color)) return;
+  if (coSet(patch)) { renderCompanySettings(); refreshOpenReport(); }
+}
+function refreshOpenReport() {
+  const r = document.getElementById('screen-report');
+  if (r && r.classList.contains('active') && isDocStyle(selectedFormat)) buildReport(selectedFormat);
+}
+function loadCompanyLogo(input) {
+  const f = input.files && input.files[0]; input.value = '';
+  if (!f) return;
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {
+    // Keep it small: 600 px wide is plenty for an A4 header.
+    const scale = Math.min(1, 600 / img.width, 200 / img.height);
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    if (coSet({ logo: c.toDataURL('image/png') })) { renderCompanySettings(); refreshOpenReport(); showToast('Logo saved on this phone'); }
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); showToast('That file is not a picture'); };
+  img.src = url;
+}
+function removeCompanyLogo() { if (coSet({ logo: '' })) { renderCompanySettings(); refreshOpenReport(); } }
+function setDefaultDocStyle(s) {
+  localStorage.setItem('defaultReportFormat', s);
+  selectedFormat = s;
+  document.querySelectorAll('.format-full-card').forEach(c => c.classList.toggle('selected', c.dataset.fmt === s));
+  renderCompanySettings();
+  showToast(RDOC_STYLES[s] + ' is now the default report');
+}
+
+// Signature pad in Settings. Saved once, used on every report.
+let _padCtx = null, _padDown = false, _padInk = false;
+function initSigPad() {
+  const c = document.getElementById('sigPad'); if (!c || c.__init) return; c.__init = true;
+  _padCtx = c.getContext('2d'); _padCtx.lineWidth = 3; _padCtx.lineCap = 'round'; _padCtx.strokeStyle = '#111';
+  const pos = e => { const r = c.getBoundingClientRect(), s = e.touches ? e.touches[0] : e; return { x: (s.clientX - r.left) * c.width / r.width, y: (s.clientY - r.top) * c.height / r.height }; };
+  const down = e => { e.preventDefault(); _padDown = true; const p = pos(e); _padCtx.beginPath(); _padCtx.moveTo(p.x, p.y); };
+  const move = e => { if (!_padDown) return; e.preventDefault(); const p = pos(e); _padCtx.lineTo(p.x, p.y); _padCtx.stroke(); _padInk = true; };
+  const up = () => { _padDown = false; };
+  c.addEventListener('mousedown', down); c.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+  c.addEventListener('touchstart', down, { passive: false }); c.addEventListener('touchmove', move, { passive: false }); c.addEventListener('touchend', up);
+}
+function clearSigPad() { const c = document.getElementById('sigPad'); if (c && _padCtx) _padCtx.clearRect(0, 0, c.width, c.height); _padInk = false; }
+function saveSigPad() {
+  const c = document.getElementById('sigPad');
+  if (!c || !_padInk) { showToast('Draw your signature in the box first'); return; }
+  // Trim the empty space around the ink so it sits well in the sign-off box.
+  const d = _padCtx.getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (d[(y * c.width + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const pad = 6, w = Math.min(c.width, x1 - x0 + pad * 2), h = Math.min(c.height, y1 - y0 + pad * 2);
+  const o = document.createElement('canvas'); o.width = w; o.height = h;
+  o.getContext('2d').drawImage(c, Math.max(0, x0 - pad), Math.max(0, y0 - pad), w, h, 0, 0, w, h);
+  try { localStorage.setItem(SIG_KEY, o.toDataURL('image/png')); } catch (e) { showToast('Could not save the signature'); return; }
+  clearSigPad(); renderCompanySettings(); refreshOpenReport();
+  showToast('Signature saved on this phone. It goes on every report.');
+}
+function removeSignature() {
+  if (!confirm('Remove your saved signature from this phone?\n\nReports already saved keep their signature.')) return;
+  try { localStorage.removeItem(SIG_KEY); } catch (e) {}
+  renderCompanySettings();
+}
 
 </script>
 
