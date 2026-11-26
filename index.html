@@ -1579,6 +1579,19 @@
           </div>
           <div class="btn-row" id="gdOffRow"><button class="btn-secondary danger-btn" id="gdOffBtn" onclick="gdDisconnect()" style="display:none;">Turn off Drive backup</button></div>
         </div>
+        <div class="gd-card" style="margin-top:10px;">
+          <div class="gd-head"><span class="gd-ico" aria-hidden="true">&#128202;</span><b>Dashboard and workshop</b></div>
+          <div class="toggle-sub-text" id="srvStat" style="margin:4px 0 9px;"></div>
+          <div id="srvConnectRow">
+            <input type="text" id="srvCodeIn" placeholder="Paste PHONE code (AYN1.…)" autocomplete="off" spellcheck="false"
+                   style="width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:10px;font-size:13px;margin-bottom:8px;background:#fff;">
+            <div class="btn-row"><button class="btn-secondary" onclick="srvConnect()">Connect</button></div>
+          </div>
+          <div id="srvOnRow" style="display:none;">
+            <div class="btn-row"><button class="btn-secondary" onclick="srvSync(true)">Send now</button>
+            <button class="btn-secondary danger-btn" onclick="srvDisconnect()">Disconnect</button></div>
+          </div>
+        </div>
         <div class="toggle-sub-text" style="margin:12px 0 9px;">Or keep a backup file yourself:</div>
         <div class="btn-row">
           <button class="btn-secondary" onclick="exportAllReports()">Export a backup</button>
@@ -6161,7 +6174,7 @@ function settingsTab(which) {
     if (pane) pane.classList.toggle('on', t === which);
   });
   if (which === 'fleet') renderFleetList();
-  if (which === 'app') renderInstallDiag();
+  if (which === 'app') { renderInstallDiag(); if (typeof srvRender === 'function') srvRender(); if (typeof gdRender === 'function') gdRender(); }
   if (which === 'company') { renderCompanySettings(); initSigPad(); }
 }
 
@@ -8069,6 +8082,174 @@ function removeSignature() {
   try { localStorage.removeItem(SIG_KEY); } catch (e) {}
   renderCompanySettings();
 }
+
+
+// ════════════════════════════════════════════════════════════════════════
+// v39 — SEND REPORTS TO YOUR OWN SERVER (Google Apps Script in your account)
+// ════════════════════════════════════════════════════════════════════════
+// The connection code (pasted once in Settings) holds the server address and
+// the phone key. It is stored on this phone only. Each finished report is sent
+// with its issues and issue photos; the signature is never sent.
+const SRV_CODE  = 'aynServerCode';
+const SRV_QUEUE = 'aynServerQueue';     // {reportKey: 1}
+const SRV_SENT  = 'aynServerSent';      // {photoSig: 1} photos the server already has
+const SRV_STATE = 'aynServerState';     // {last, error}
+const srv = { busy: false, timer: null };
+
+function srvParse(code) {
+  const m = /^AYN1\.([A-Za-z0-9_\-=]+)$/.exec(String(code || '').trim());
+  if (!m) return null;
+  try {
+    const raw = atob(m[1].replace(/-/g, '+').replace(/_/g, '/'));
+    const i = raw.lastIndexOf('|');
+    if (i < 8 || !/^(https:\/\/|http:\/\/127\.0\.0\.1)/.test(raw)) return null;
+    return { url: raw.slice(0, i), key: raw.slice(i + 1) };
+  } catch (e) { return null; }
+}
+function srvConn() { try { return srvParse(localStorage.getItem(SRV_CODE)); } catch (e) { return null; } }
+function srvJson(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
+function srvSave(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+async function srvCall(conn, body) {
+  const r = await fetch(conn.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                    body: JSON.stringify(Object.assign({ key: conn.key }, body)) });
+  if (!r.ok) throw new Error('Server answered ' + r.status);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'Server refused');
+  return j;
+}
+
+// Short fingerprint so a photo is uploaded once, not on every edit.
+function srvSig(s) {
+  let h1 = 0x811c9dc5, h2 = 0;
+  for (let i = 0; i < s.length; i++) { h1 = Math.imul(h1 ^ s.charCodeAt(i), 16777619); h2 = (h2 * 31 + s.charCodeAt(i)) | 0; }
+  return s.length.toString(36) + '-' + (h1 >>> 0).toString(36) + '-' + (h2 >>> 0).toString(36);
+}
+
+function srvPayload(rec, withAll) {
+  const d = rec.inspData || {};
+  const its = rec.items || [];
+  const fails = [];
+  its.forEach((it, i) => { if (it.status === 'fail') fails.push({ it, i }); });
+  const sent = srvJson(SRV_SENT, {});
+  const pri = it => (typeof itemPriority === 'function' ? itemPriority(it) : 'Medium');
+  const high = fails.filter(f => pri(f.it) === 'High').length;
+  const ok = its.filter(x => x.status === 'ok').length;
+  const result = !fails.length ? 'Fit for use' : (high ? 'Not fit for use' : 'Fit with conditions');
+  const day = String(d.date || rec.date || '').slice(0, 10);
+  return {
+    reportId: rec.id, reportNum: rec.reportNum || d.reportNum || '', date: day,
+    plate: d.truckNo || rec.truckNo || '', fsl: d.fsl || '', vehType: d.vehType || rec.vehType || '', make: d.make || '',
+    driver: (d.driverName && d.driverName !== '—') ? d.driverName : '', site: (d.location && d.location !== '—') ? d.location : '',
+    inspector: d.inspectorName || rec.inspector || '',
+    points: its.length, ok, issues: fails.length, high, result,
+    issueList: fails.map((f, k) => {
+      const lines = String(f.it.note || '').split('\n').map(x => x.trim()).filter(Boolean);
+      return {
+        issueId: rec.id + '#' + f.i, n: k + 1, section: f.it.section || '', point: f.it.name,
+        finding: lines[0] || 'Not compliant.', action: lines.slice(1).join(' '), priority: pri(f.it),
+        photos: (f.it.photos || []).map(p => (typeof photoSrc === 'function' ? photoSrc(p) : p)).filter(Boolean)
+                  .map(s => { const sig = srvSig(s); return { sig, data: (withAll || !sent[sig]) ? s : null }; })
+      };
+    })
+  };
+}
+
+function srvNoteChange(key) {
+  if (!srvConn() || typeof key !== 'string' || !key.startsWith('insp:')) return;
+  const q = srvJson(SRV_QUEUE, {}); q[key] = 1; srvSave(SRV_QUEUE, q);
+  srvRender();
+  clearTimeout(srv.timer); srv.timer = setTimeout(() => srvSync(false), 3000);
+}
+
+(function srvHookStorage() {
+  if (!window.storage || window.storage.__srv) return;
+  const s = window.storage, set = s.set.bind(s);
+  s.set = async (k, v) => { const r = await set(k, v); if (!(typeof gd !== 'undefined' && gd.restoring)) srvNoteChange(k); return r; };
+  s.__srv = true;
+})();
+
+async function srvSync(fromTap) {
+  const conn = srvConn();
+  if (!conn || srv.busy) return;
+  if (!navigator.onLine) { srvRender(); return; }
+  srv.busy = true; srvRender();
+  const st = srvJson(SRV_STATE, {}); let sent = 0;
+  try {
+    const q = srvJson(SRV_QUEUE, {});
+    for (const key of Object.keys(q)) {
+      const r = await window.storage.get(key);
+      if (r && r.value) {
+        const rec = JSON.parse(r.value);
+        if (!rec.isDraft) {
+          let res = await srvCall(conn, { action: 'submit', report: srvPayload(rec, false) });
+          if (res.need && res.need.length) res = await srvCall(conn, { action: 'submit', report: srvPayload(rec, true) });
+          const s2 = srvJson(SRV_SENT, {});
+          srvPayload(rec, true).issueList.forEach(x => x.photos.forEach(p => { s2[p.sig] = 1; }));
+          srvSave(SRV_SENT, s2);
+          sent++;
+        }
+      }
+      const q2 = srvJson(SRV_QUEUE, {}); delete q2[key]; srvSave(SRV_QUEUE, q2);
+      srvRender();
+    }
+    st.last = new Date().toISOString(); st.error = '';
+    if (fromTap) showToast(sent ? 'Sent ' + sent + ' report' + (sent > 1 ? 's' : '') + ' to your dashboard' : 'Dashboard is up to date');
+  } catch (e) {
+    st.error = e.message || String(e);
+    if (fromTap) showToast('Could not send: ' + st.error);
+  } finally {
+    srvSave(SRV_STATE, st); srv.busy = false; srvRender();
+  }
+}
+
+async function srvConnect() {
+  const inp = document.getElementById('srvCodeIn');
+  const code = inp ? inp.value.trim() : '';
+  const conn = srvParse(code);
+  if (!conn) { showToast('That code is not right. It starts with AYN1.'); return; }
+  if (!navigator.onLine) { showToast('Connecting needs internet'); return; }
+  try {
+    const r = await srvCall(conn, { action: 'ping' });
+    if (r.role !== 'phone') { showToast('That is the ' + r.role + ' code. Use the PHONE code here.'); return; }
+  } catch (e) { showToast('Could not reach the server: ' + (e.message || e)); return; }
+  localStorage.setItem(SRV_CODE, code);
+  if (inp) inp.value = '';
+  // Send every finished report already on this phone.
+  const list = await window.storage.list('insp:');
+  const q = srvJson(SRV_QUEUE, {}); (list.keys || []).forEach(k => { q[k] = 1; }); srvSave(SRV_QUEUE, q);
+  showToast('Connected. Sending your reports…');
+  srvRender(); srvSync(true);
+}
+
+function srvDisconnect() {
+  if (!confirm('Stop sending reports to the dashboard from this phone?\n\nReports already on the dashboard stay there.')) return;
+  [SRV_CODE, SRV_QUEUE, SRV_STATE].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  srvRender();
+}
+
+function srvRender() {
+  const conn = srvConn(), st = srvJson(SRV_STATE, {}), n = Object.keys(srvJson(SRV_QUEUE, {})).length;
+  const el = document.getElementById('srvStat');
+  if (el) {
+    let t;
+    if (!conn) t = 'Not connected. Paste the PHONE code from your server once.';
+    else {
+      t = 'Connected.';
+      if (srv.busy) t += ' Sending…';
+      else if (n) t += ' ' + n + ' waiting' + (navigator.onLine ? '.' : ', will send when online.');
+      else if (st.last) t += ' Up to date, last sent ' + (typeof gdWhen === 'function' ? gdWhen(st.last) : st.last) + '.';
+      if (st.error) t += ' Last try failed: ' + st.error;
+    }
+    el.textContent = t;
+  }
+  const show = (id, v) => { const e = document.getElementById(id); if (e) e.style.display = v ? '' : 'none'; };
+  show('srvConnectRow', !conn); show('srvOnRow', !!conn);
+}
+
+window.addEventListener('online', () => srvSync(false));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) srvSync(false); });
+setTimeout(() => { srvRender(); srvSync(false); }, 1800);
 
 </script>
 

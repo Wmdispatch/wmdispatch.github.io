@@ -1,8 +1,8 @@
-/* Ayn Fleet: service worker (ships with app v38)
+/* Ayn Fleet: service worker (ships with app v39)
    Goal: after ONE successful visit the app works with no network at all —
    no reload, no spinner, no "you are offline" page. */
 
-const CACHE = 'fleet-inspect-shell-v8';
+const CACHE = 'fleet-inspect-shell-v9';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png',
@@ -44,6 +44,15 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== location.origin) return;   // never touch cross-origin
 
+  const path = new URL(req.url).pathname;
+  // Dashboards are online pages: always fetch them fresh, cache only as a fallback.
+  if (/\/(dashboard|workshop)\.html$|\/dash[^/]*\.(css|js)$/.test(path)) {
+    e.respondWith(fetch(req).then(async res => {
+      if (res && res.ok) { const c = await caches.open(CACHE); c.put(req, res.clone()); }
+      return res;
+    }).catch(async () => (await caches.match(req, { ignoreSearch: true })) || new Response('Offline', { status: 504 })));
+    return;
+  }
   if (req.mode === 'navigate') {
     e.respondWith((async () => {
       const cached = (await caches.match('./index.html', { ignoreSearch: true })) ||

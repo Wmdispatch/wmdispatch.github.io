@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Workshop Jobs</title>
+<link rel="icon" href="favicon-48.png">
+<link rel="stylesheet" href="dash.css">
+</head>
+<body>
+<div id="gate" hidden>
+  <h1>Workshop jobs</h1>
+  <p>Paste the WORKSHOP code once. It is kept in this browser only.</p>
+  <input id="gateIn" placeholder="AYN1.…" autocomplete="off" spellcheck="false">
+  <button class="btn pri" id="gateBtn">Open jobs</button>
+  <div id="gateMsg"></div>
+</div>
+
+<div id="app" hidden>
+  <div class="top">
+    <img src="icon-192.png" alt="">
+    <div><h1>Workshop jobs</h1><div class="sub" id="updated">Loading…</div></div>
+    <div class="sp"></div>
+    <button class="btn" id="refresh">Refresh</button>
+    <button class="btn" id="logout">Sign out</button>
+  </div>
+  <div class="wrap">
+    <div class="kpis" id="kpis"></div>
+    <div class="filters">
+      <select id="fSite"><option value="">All sites</option></select>
+      <select id="fPri"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
+      <input id="fPlate" placeholder="Search plate, FSL or point">
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script src="dash-common.js"></script>
+<script>
+(function () {
+  const A = window.AYN, $ = id => document.getElementById(id), esc = A.esc;
+  let conn = null, ISS = [], tab = 'Open';
+  const ORD = { High: 0, Medium: 1, Low: 2 };
+
+  async function load() {
+    $('updated').textContent = 'Loading…';
+    try {
+      ISS = (await A.call(conn, { action: 'workshop' })).issues;
+      const cur = $('fSite').value;
+      $('fSite').innerHTML = '<option value="">All sites</option>' + [...new Set(ISS.map(x => x.site).filter(Boolean))].sort().map(s => '<option>' + esc(s) + '</option>').join('');
+      $('fSite').value = cur;
+      render();
+      $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) { $('updated').textContent = 'Could not load: ' + e.message; }
+  }
+
+  function render() {
+    const site = $('fSite').value, pri = $('fPri').value, q = $('fPlate').value.trim().toLowerCase().replace(/\s+/g, '');
+    const base = ISS.filter(x => (!site || x.site === site) && (!pri || x.priority === pri) &&
+      (!q || [x.plate, x.fsl, x.point].some(s => String(s || '').toLowerCase().replace(/\s+/g, '').includes(q))));
+    const n = s => base.filter(x => x.status === s).length;
+    $('kpis').innerHTML = [['Open', n('Open'), '#B00020'], ['High priority open', base.filter(x => x.status !== 'Fixed' && x.priority === 'High').length, '#B00020'],
+      ['In progress', n('In progress'), '#A15C00'], ['Fixed (last 45 days)', n('Fixed'), '#1D7A3E']]
+      .map(([l, v, c]) => `<div class="kpi"><div class="n" style="color:${c}">${v}</div><div class="l">${l}</div></div>`).join('');
+    $('tabs').innerHTML = ['Open', 'In progress', 'Fixed', 'All'].map(t => `<button class="${t === tab ? 'on' : ''}" data-t="${t}">${t} (${t === 'All' ? base.length : n(t)})</button>`).join('');
+    $('tabs').querySelectorAll('button').forEach(b => { b.onclick = () => { tab = b.dataset.t; render(); }; });
+    const list = base.filter(x => tab === 'All' || x.status === tab)
+      .sort((a, b) => (ORD[a.priority] - ORD[b.priority]) || String(b.date).localeCompare(String(a.date)));
+    $('list').innerHTML = list.length ? list.map(card).join('') : '<div class="card empty">No jobs here.</div>';
+    $('list').querySelectorAll('button[data-act]').forEach(b => { b.onclick = () => setStatus(b.dataset.id, b.dataset.act); });
+    $('list').querySelectorAll('.thumbs img').forEach(im => { im.onclick = () => { if (im.classList.contains('ok')) A.modal(`<img src="${im.src}" style="width:100%;border-radius:10px">`); }; });
+    A.loadPhotos(conn, $('list'));
+  }
+
+  function card(x) {
+    const c = A.PRI[x.priority] || '#6B7D75';
+    const btns = x.status === 'Open' ? `<button class="btn warn" data-act="In progress" data-id="${esc(x.issueId)}">Start work</button><button class="btn good" data-act="Fixed" data-id="${esc(x.issueId)}">Mark fixed</button>`
+      : x.status === 'In progress' ? `<button class="btn good" data-act="Fixed" data-id="${esc(x.issueId)}">Mark fixed</button><button class="btn" data-act="Open" data-id="${esc(x.issueId)}">Back to open</button>`
+      : `<button class="btn" data-act="Open" data-id="${esc(x.issueId)}">Reopen</button>`;
+    const ph = String(x.photoIds || '').split(',').filter(Boolean);
+    return `<div class="wcard" style="border-left-color:${c}">
+      <div><div class="plate">${esc(x.plate)} <span class="muted" style="font-size:13px;font-weight:600">${esc(x.fsl)} · ${esc(x.vehType)}</span></div>
+        <div class="meta">${esc(x.site)} · Report ${esc(x.reportNum)} · ${A.day(x.date)} · Inspector ${esc(x.inspector)}</div>
+        <div class="pt">${esc(x.point)} <span class="muted" style="font-weight:600">· ${esc(x.section)}</span></div>
+        <div>${esc(x.finding)}</div><div class="act">${esc(x.action)}</div>
+        ${ph.length ? `<div class="thumbs">${ph.map(p => `<img data-pid="${esc(p)}" alt="Loading photo…">`).join('')}</div>` : ''}
+        ${x.workshopNote ? `<div class="note"><b>Workshop note:</b> ${esc(x.workshopNote)}</div>` : ''}</div>
+      <div class="side"><span class="tag" style="color:${c}">${esc(x.priority).toUpperCase()}</span>
+        <span class="pill" style="background:${A.STAT[x.status] || '#6B7D75'}">${esc(x.status)}</span>
+        ${x.statusUpdatedAt ? `<span class="muted" style="font-size:11.5px">${A.day(x.statusUpdatedAt)}</span>` : ''}${btns}</div></div>`;
+  }
+
+  async function setStatus(id, status) {
+    const x = ISS.find(i => i.issueId === id); if (!x) return;
+    let note = x.workshopNote || '';
+    if (status === 'Fixed') {
+      const t = prompt('What was done? (optional, shown to HSE)', note);
+      if (t === null) return; note = t.trim();
+    }
+    try {
+      await A.call(conn, { action: 'update', issueId: id, status, note });
+      x.status = status; x.workshopNote = note; x.statusUpdatedAt = new Date().toISOString();
+      render();
+    } catch (e) { alert('Could not save: ' + e.message); }
+  }
+
+  ['fSite', 'fPri'].forEach(id => { $(id).onchange = render; });
+  $('fPlate').oninput = render;
+  $('refresh').onclick = load;
+  A.gate('aynWorkshopCode', 'workshop', c => { conn = c; load(); setInterval(load, 3 * 60 * 1000); });
+})();
+</script>
+</body>
+</html>

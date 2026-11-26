@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ayn Fleet Dashboard</title>
+<link rel="icon" href="favicon-48.png">
+<link rel="stylesheet" href="dash.css">
+</head>
+<body>
+<div id="gate" hidden>
+  <h1>Ayn Fleet dashboard</h1>
+  <p>Paste your ADMIN code once. It is kept in this browser only.</p>
+  <input id="gateIn" placeholder="AYN1.…" autocomplete="off" spellcheck="false">
+  <button class="btn pri" id="gateBtn">Open dashboard</button>
+  <div id="gateMsg"></div>
+</div>
+
+<div id="app" hidden>
+  <div class="top">
+    <img src="icon-192.png" alt="">
+    <div><h1>Fleet inspection dashboard</h1><div class="sub" id="updated">Loading…</div></div>
+    <div class="sp"></div>
+    <button class="btn" id="csvBtn">Export issues (CSV)</button>
+    <button class="btn" id="refresh">Refresh</button>
+    <button class="btn" id="logout">Sign out</button>
+  </div>
+  <div class="wrap">
+    <div class="filters">
+      <select id="fRange"><option value="0">All dates</option><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option></select>
+      <select id="fSite"><option value="">All sites</option></select>
+      <select id="fType"><option value="">All vehicle types</option></select>
+      <select id="fInsp"><option value="">All inspectors</option></select>
+      <input id="fPlate" placeholder="Search plate, FSL or point">
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="card"><h2>Inspection results</h2><div class="bars" id="cResult"></div></div>
+      <div class="card"><h2>Issues by priority</h2><div class="bars" id="cPri"></div></div>
+      <div class="card"><h2>Workshop status</h2><div class="bars" id="cStat"></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>Inspections per week</h2><div class="cols" id="cWeek"></div></div>
+      <div class="card"><h2>Issues by checklist section</h2><div class="bars" id="cSec"></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h2>Most failed points</h2><div class="bars" id="cTop"></div></div>
+      <div class="card"><h2>Issues by site</h2><div class="bars" id="cSite"></div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px;">
+      <h2>Vehicles inspected more than once</h2>
+      <div class="tscroll"><table class="t" id="tRepeat"></table></div>
+    </div>
+    <div class="card" style="margin-bottom:14px;">
+      <h2>Issues</h2>
+      <div class="tabs" id="issTabs"></div>
+      <div class="tscroll"><table class="t" id="tIss"></table></div>
+    </div>
+    <div class="card">
+      <h2>Inspections</h2>
+      <div class="tscroll"><table class="t" id="tInsp"></table></div>
+    </div>
+  </div>
+</div>
+
+<script src="dash-common.js"></script>
+<script>
+(function () {
+  const A = window.AYN, $ = id => document.getElementById(id), esc = A.esc;
+  let conn = null, DATA = { inspections: [], issues: [] }, issTab = 'Open';
+
+  async function load() {
+    $('updated').textContent = 'Loading…';
+    try {
+      DATA = await A.call(conn, { action: 'data' });
+      fillFilters(); render();
+      $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · ' + DATA.inspections.length + ' inspections on record';
+    } catch (e) { $('updated').textContent = 'Could not load: ' + e.message; }
+  }
+
+  function uniq(list, k) { return [...new Set(list.map(x => x[k]).filter(Boolean))].sort(); }
+  function fillFilters() {
+    [['fSite', 'site', 'All sites'], ['fType', 'vehType', 'All vehicle types'], ['fInsp', 'inspector', 'All inspectors']].forEach(([id, k, all]) => {
+      const el = $(id), cur = el.value;
+      el.innerHTML = '<option value="">' + all + '</option>' + uniq(DATA.inspections, k).map(v => '<option>' + esc(v) + '</option>').join('');
+      el.value = cur;
+    });
+  }
+
+  function filtered() {
+    const days = +$('fRange').value, site = $('fSite').value, type = $('fType').value, insp = $('fInsp').value;
+    const q = $('fPlate').value.trim().toLowerCase().replace(/\s+/g, '');
+    const since = days ? Date.now() - days * 864e5 : 0;
+    const okI = x => (!since || Date.parse(x.date) >= since - 864e5) && (!site || x.site === site) && (!type || x.vehType === type) && (!insp || x.inspector === insp);
+    const hit = (...v) => !q || v.some(s => String(s || '').toLowerCase().replace(/\s+/g, '').includes(q));
+    const ins = DATA.inspections.filter(x => okI(x) && hit(x.plate, x.fsl, x.reportNum));
+    const ids = new Set(ins.map(x => x.reportId));
+    const allIns = DATA.inspections.filter(okI);
+    const allIds = new Set(allIns.map(x => x.reportId));
+    const iss = DATA.issues.filter(x => x.status !== 'Withdrawn' && allIds.has(x.reportId) && (ids.has(x.reportId) || hit(x.point, x.plate, x.fsl)));
+    return { ins: q ? DATA.inspections.filter(x => okI(x) && (ids.has(x.reportId) || iss.some(i => i.reportId === x.reportId))) : ins, iss };
+  }
+
+  const pct = (a, b) => b ? Math.round(a * 100 / b) + '%' : '–';
+  function bars(el, rows, color) {
+    const max = Math.max(1, ...rows.map(r => r[1]));
+    el.innerHTML = rows.length ? rows.map(([l, v, c]) => `<div class="row"><div class="lab" title="${esc(l)}">${esc(l)}</div><div class="track"><div class="fill" style="width:${v * 100 / max}%;background:${c || color || '#0f6e56'}"></div></div><div class="v">${v}</div></div>`).join('') : '<div class="muted">No data for this filter.</div>';
+  }
+  function count(list, f) { const m = {}; list.forEach(x => { const k = f(x); if (k) m[k] = (m[k] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); }
+
+  function render() {
+    const { ins, iss } = filtered();
+    const vehicles = new Set(ins.map(x => x.plate)).size;
+    const fit = ins.filter(x => x.result === 'Fit for use').length, notFit = ins.filter(x => x.result === 'Not fit for use').length;
+    const open = iss.filter(x => x.status !== 'Fixed'), highOpen = open.filter(x => x.priority === 'High').length;
+    const fixed = iss.filter(x => x.status === 'Fixed').length;
+    const pts = ins.reduce((a, x) => a + (+x.points || 0), 0), okp = ins.reduce((a, x) => a + (+x.ok || 0), 0);
+    const k = (n, l, s, c) => `<div class="kpi"><div class="n"${c ? ` style="color:${c}"` : ''}>${n}</div><div class="l">${l}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+    $('kpis').innerHTML = k(ins.length, 'Inspections', vehicles + ' vehicles') + k(pct(fit, ins.length), 'Fit for use', fit + ' of ' + ins.length, '#1D7A3E') +
+      k(notFit, 'Not fit for use', pct(notFit, ins.length) + ' of inspections', notFit ? '#B00020' : '') +
+      k(pct(okp, pts), 'Points satisfactory', okp + ' of ' + pts + ' points') + k(iss.length, 'Issues found', (ins.length ? (iss.length / ins.length).toFixed(1) : 0) + ' per inspection') +
+      k(open.length, 'Issues not fixed', highOpen + ' high priority', open.length ? '#A15C00' : '') + k(pct(fixed, iss.length), 'Fixed by workshop', fixed + ' of ' + iss.length, '#1D7A3E');
+
+    bars($('cResult'), [['Fit for use', fit, '#1D7A3E'], ['Fit with conditions', ins.filter(x => x.result === 'Fit with conditions').length, '#A15C00'], ['Not fit for use', notFit, '#B00020']]);
+    bars($('cPri'), ['High', 'Medium', 'Low'].map(p => [p, iss.filter(x => x.priority === p).length, A.PRI[p]]));
+    bars($('cStat'), ['Open', 'In progress', 'Fixed'].map(s => [s, iss.filter(x => x.status === s).length, A.STAT[s]]));
+    bars($('cSec'), count(iss, x => x.section).slice(0, 10));
+    bars($('cTop'), count(iss, x => x.point).slice(0, 10), '#B00020');
+    bars($('cSite'), count(iss, x => x.site).slice(0, 10), '#1F3864');
+
+    // weeks
+    const wk = d => { const t = new Date(d); if (isNaN(t)) return null; const m = new Date(t); m.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return m.toISOString().slice(0, 10); };
+    const wc = {}; ins.forEach(x => { const w = wk(x.date); if (w) wc[w] = (wc[w] || 0) + 1; });
+    const weeks = Object.keys(wc).sort().slice(-12), wmax = Math.max(1, ...weeks.map(w => wc[w]));
+    $('cWeek').innerHTML = weeks.length ? weeks.map(w => `<div class="c"><div class="n">${wc[w]}</div><div class="b" style="height:${wc[w] * 100 / wmax}px"></div><div class="t">${A.day(w).slice(0, 6)}</div></div>`).join('') : '<div class="muted">No data for this filter.</div>';
+
+    // repeated vehicles
+    const byPlate = {};
+    ins.forEach(x => { (byPlate[x.plate] = byPlate[x.plate] || []).push(x); });
+    const rep = Object.entries(byPlate).filter(([, l]) => l.length > 1).map(([plate, l]) => {
+      l.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      const pi = iss.filter(x => x.plate === plate), pc = {};
+      pi.forEach(x => { pc[x.point] = (pc[x.point] || new Set()).add(x.reportId); });
+      const repeats = Object.entries(pc).filter(([, s]) => s.size > 1).map(([p, s]) => p + ' (' + s.size + 'x)');
+      return { plate, l, pi, repeats };
+    }).sort((a, b) => b.repeats.length - a.repeats.length || b.l.length - a.l.length);
+    $('tRepeat').innerHTML = '<tr><th>Plate</th><th>FSL</th><th>Type</th><th>Site</th><th>Inspections</th><th>Last inspected</th><th>Last result</th><th>Issues (all)</th><th>Same defect found again</th></tr>' +
+      (rep.length ? rep.map(r => `<tr><td><b>${esc(r.plate)}</b></td><td>${esc(r.l[0].fsl)}</td><td>${esc(r.l[0].vehType)}</td><td>${esc(r.l[0].site)}</td><td>${r.l.length}</td><td>${A.day(r.l[0].date)}</td><td>${resPill(r.l[0].result)}</td><td>${r.pi.length}</td><td>${r.repeats.length ? '<span style="color:#B00020;font-weight:700">' + esc(r.repeats.join(', ')) + '</span>' : '<span class="muted">None</span>'}</td></tr>`).join('')
+        : '<tr><td colspan="9" class="empty">No vehicle has more than one inspection in this period.</td></tr>');
+
+    // issues
+    const tabs = ['Open', 'In progress', 'Fixed', 'All'];
+    $('issTabs').innerHTML = tabs.map(t => `<button class="${t === issTab ? 'on' : ''}" data-t="${t}">${t} (${t === 'All' ? iss.length : iss.filter(x => x.status === t).length})</button>`).join('');
+    $('issTabs').querySelectorAll('button').forEach(b => { b.onclick = () => { issTab = b.dataset.t; render(); }; });
+    const shown = iss.filter(x => issTab === 'All' || x.status === issTab).sort((a, b) => String(b.date).localeCompare(String(a.date)) || ({ High: 0, Medium: 1, Low: 2 }[a.priority] - { High: 0, Medium: 1, Low: 2 }[b.priority]));
+    $('tIss').innerHTML = '<tr><th>Date</th><th>Report</th><th>Plate</th><th>Site</th><th>Point</th><th>Finding and action</th><th>Priority</th><th>Status</th><th>Workshop note</th><th>Photos</th></tr>' +
+      (shown.length ? shown.map(x => `<tr><td>${A.day(x.date)}</td><td>${esc(x.reportNum)}</td><td><b>${esc(x.plate)}</b><div class="muted">${esc(x.fsl)}</div></td><td>${esc(x.site)}</td><td><b>${esc(x.point)}</b><div class="muted">${esc(x.section)}</div></td><td>${esc(x.finding)}<div><b>${esc(x.action)}</b></div></td><td><span class="tag" style="color:${A.PRI[x.priority] || '#111'}">${esc(x.priority)}</span></td><td><span class="pill" style="background:${A.STAT[x.status] || '#6B7D75'}">${esc(x.status)}</span>${x.statusUpdatedAt ? `<div class="muted">${A.day(x.statusUpdatedAt)}</div>` : ''}</td><td>${esc(x.workshopNote)}</td><td>${x.photoIds ? `<button class="btn" data-iss="${esc(x.issueId)}">View (${String(x.photoIds).split(',').length})</button>` : '<span class="muted">–</span>'}</td></tr>`).join('')
+        : '<tr><td colspan="10" class="empty">No issues here.</td></tr>');
+    $('tIss').querySelectorAll('button[data-iss]').forEach(b => { b.onclick = () => showIssue(b.dataset.iss); });
+
+    const si = ins.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    $('tInsp').innerHTML = '<tr><th>Date</th><th>Report no.</th><th>Plate</th><th>FSL</th><th>Type</th><th>Driver</th><th>Site</th><th>Inspector</th><th>Points</th><th>OK</th><th>Issues</th><th>Result</th></tr>' +
+      (si.length ? si.map(x => `<tr><td>${A.day(x.date)}</td><td>${esc(x.reportNum)}</td><td><b>${esc(x.plate)}</b></td><td>${esc(x.fsl)}</td><td>${esc(x.vehType)}</td><td>${esc(x.driver)}</td><td>${esc(x.site)}</td><td>${esc(x.inspector)}</td><td>${x.points}</td><td>${x.ok}</td><td>${x.issues}${x.high ? ` <span style="color:#B00020">(${x.high} high)</span>` : ''}</td><td>${resPill(x.result)}</td></tr>`).join('')
+        : '<tr><td colspan="12" class="empty">No inspections for this filter.</td></tr>');
+  }
+  function resPill(r) { const c = r === 'Fit for use' ? '#1D7A3E' : r === 'Not fit for use' ? '#B00020' : '#A15C00'; return `<span class="pill" style="background:${c}">${esc(r)}</span>`; }
+
+  function showIssue(id) {
+    const x = DATA.issues.find(i => i.issueId === id); if (!x) return;
+    const m = A.modal(`<h3 style="margin:0 0 4px">${esc(x.plate)} · ${esc(x.point)}</h3><div class="muted">${esc(x.reportNum)} · ${A.day(x.date)} · ${esc(x.site)} · Inspector ${esc(x.inspector)}</div>
+      <p>${esc(x.finding)} <b>${esc(x.action)}</b></p>
+      <div class="photos">${String(x.photoIds || '').split(',').filter(Boolean).map(p => `<img data-pid="${esc(p)}" alt="Loading photo…">`).join('')}</div>`);
+    A.loadPhotos(conn, m);
+  }
+
+  function csv() {
+    const { iss } = filtered();
+    const cols = ['date', 'reportNum', 'plate', 'fsl', 'vehType', 'site', 'inspector', 'section', 'point', 'finding', 'action', 'priority', 'status', 'workshopNote', 'statusUpdatedAt'];
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const text = '﻿' + cols.join(',') + '\n' + iss.map(x => cols.map(c => q(x[c])).join(',')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+    a.download = 'fleet_issues_' + new Date().toISOString().slice(0, 10) + '.csv'; a.click();
+  }
+
+  ['fRange', 'fSite', 'fType', 'fInsp'].forEach(id => { $(id).onchange = render; });
+  $('fPlate').oninput = render;
+  $('refresh').onclick = load;
+  $('csvBtn').onclick = csv;
+  A.gate('aynAdminCode', 'admin', c => { conn = c; load(); setInterval(load, 5 * 60 * 1000); });
+})();
+</script>
+</body>
+</html>
