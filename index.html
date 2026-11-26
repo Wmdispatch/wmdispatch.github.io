@@ -7188,8 +7188,10 @@ async function startCamStream() {
     const constraints = {
       video: {
         facingMode: { ideal: camFacingMode },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+        // v40: ask for the sharpest picture the camera can stream (4K where
+        // the phone allows it, otherwise its best, usually Full HD).
+        width: { ideal: 3840 },
+        height: { ideal: 2160 }
       },
       audio: false
     };
@@ -7260,7 +7262,7 @@ function captureFrame() {
     showToast('The camera gave a blank picture. Wait a moment and try again, or use the phone camera.');
     return;
   }
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
   camCapturedPhotos.push({ src: dataUrl });
   warnPhotoQuality(dataUrl);
   autoSaveCapturedPhoto(dataUrl);   // v29: also write it out to the device

@@ -66,7 +66,11 @@
   };
   A.loadPhotos = async function (conn, root) {
     for (const el of root.querySelectorAll('img[data-pid]')) {
-      try { el.src = await A.photo(conn, el.dataset.pid); el.classList.add('ok'); } catch (e) { el.alt = 'Photo could not load'; }
+      try { el.src = await A.photo(conn, el.dataset.pid); el.classList.add('ok'); }
+      catch (e) {
+        const d = document.createElement('div'); d.className = 'ph-gone'; d.textContent = e.message || 'Photo could not load';
+        el.replaceWith(d);
+      }
     }
   };
   window.AYN = A;

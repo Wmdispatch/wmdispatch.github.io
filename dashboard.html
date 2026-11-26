@@ -57,6 +57,19 @@
       <div class="tabs" id="issTabs"></div>
       <div class="tscroll"><table class="t" id="tIss"></table></div>
     </div>
+    <div class="card" style="margin-bottom:14px;" id="storageCard">
+      <h2>Storage</h2>
+      <div id="stUsed" class="muted">Loading…</div>
+      <div class="meter"><div id="stBar" style="width:0"></div></div>
+      <div class="tscroll" style="max-height:300px;margin-top:10px;"><table class="t" id="tStore"></table></div>
+      <div class="storage-row">
+        <a class="btn" id="stFolder" target="_blank" rel="noopener">Open photo folders in Google Drive</a>
+        <span class="muted">After downloading, free space:</span>
+        <select id="stMonth"></select>
+        <button class="btn warn" id="stClean">Remove photos up to this month</button>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:6px;">Text records, priorities and workshop notes are always kept. Removed photos go to the Google Drive bin for 30 days.</div>
+    </div>
     <div class="card">
       <h2>Inspections</h2>
       <div class="tscroll"><table class="t" id="tInsp"></table></div>
@@ -164,6 +177,29 @@
       (si.length ? si.map(x => `<tr><td>${A.day(x.date)}</td><td>${esc(x.reportNum)}</td><td><b>${esc(x.plate)}</b></td><td>${esc(x.fsl)}</td><td>${esc(x.vehType)}</td><td>${esc(x.driver)}</td><td>${esc(x.site)}</td><td>${esc(x.inspector)}</td><td>${x.points}</td><td>${x.ok}</td><td>${x.issues}${x.high ? ` <span style="color:#B00020">(${x.high} high)</span>` : ''}</td><td>${resPill(x.result)}</td></tr>`).join('')
         : '<tr><td colspan="12" class="empty">No inspections for this filter.</td></tr>');
   }
+  const gb = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : (b / 1048576).toFixed(1) + ' MB';
+  async function loadStorage() {
+    try {
+      const st = await A.call(conn, { action: 'storage' });
+      const p = st.limit ? st.used / st.limit : 0;
+      $('stUsed').innerHTML = `Google account: <b>${gb(st.used)}</b> of ${st.limit ? gb(st.limit) : 'unlimited'} used (${Math.round(p * 100)}%). Inspection photos: <b>${gb(st.months.reduce((a, m) => a + m.bytes, 0))}</b>.`;
+      $('stBar').style.width = Math.min(100, p * 100) + '%';
+      $('stBar').style.background = p > .85 ? '#B00020' : p > .65 ? '#A15C00' : '#0f6e56';
+      $('tStore').innerHTML = '<tr><th>Month</th><th>Photos kept</th><th>Size</th><th>Removed</th></tr>' +
+        (st.months.length ? st.months.slice().reverse().map(m => `<tr><td>${esc(m.month)}</td><td>${m.photos}</td><td>${gb(m.bytes)}</td><td>${m.archived || ''}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">No photos yet.</td></tr>');
+      $('stFolder').href = st.folderUrl;
+      const keep = st.months.filter(m => m.photos);
+      $('stMonth').innerHTML = keep.map(m => `<option>${esc(m.month)}</option>`).join('') || '<option value="">Nothing to remove</option>';
+      $('stClean').disabled = !keep.length;
+    } catch (e) { $('stUsed').textContent = 'Could not read storage: ' + e.message; }
+  }
+  async function cleanUp() {
+    const m = $('stMonth').value; if (!m) return;
+    if (!confirm('Remove all inspection photos from the start up to ' + m + ' from Google Drive?\n\nDownload those month folders to the company computer first. Text records stay.')) return;
+    try { const r = await A.call(conn, { action: 'cleanup', upTo: m }); alert('Removed ' + r.removed + ' photos, freed ' + gb(r.freed) + '.'); loadStorage(); }
+    catch (e) { alert('Could not remove: ' + e.message); }
+  }
+
   function resPill(r) { const c = r === 'Fit for use' ? '#1D7A3E' : r === 'Not fit for use' ? '#B00020' : '#A15C00'; return `<span class="pill" style="background:${c}">${esc(r)}</span>`; }
 
   function showIssue(id) {
@@ -185,9 +221,10 @@
 
   ['fRange', 'fSite', 'fType', 'fInsp'].forEach(id => { $(id).onchange = render; });
   $('fPlate').oninput = render;
-  $('refresh').onclick = load;
+  $('refresh').onclick = () => { load(); loadStorage(); };
   $('csvBtn').onclick = csv;
-  A.gate('aynAdminCode', 'admin', c => { conn = c; load(); setInterval(load, 5 * 60 * 1000); });
+  $('stClean').onclick = cleanUp;
+  A.gate('aynAdminCode', 'admin', c => { conn = c; load(); loadStorage(); setInterval(load, 5 * 60 * 1000); });
 })();
 </script>
 </body>
