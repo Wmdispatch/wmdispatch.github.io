@@ -1098,6 +1098,17 @@
                font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; letter-spacing:1px;
                cursor:pointer; margin-top:10px; }
   body.big-touch .fi-commit { padding:17px; font-size:17px; min-height:52px; }
+
+  @media screen {
+    .gd-card { border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--tint2); }
+    .gd-head { display:flex; align-items:center; gap:8px; font-size:14px; }
+    .gd-ico { color:var(--accent); font-size:17px; }
+    .gd-bar { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px; border-radius:12px;
+              background:var(--tint); border:1px solid #bfe3d2; font-size:13px; font-weight:700; color:var(--accent2); }
+    .gd-bar-btn { background:var(--accent); color:#fff; border:none; border-radius:9px; padding:8px 12px; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap; }
+    #gdOffRow:empty { display:none; }
+  }
+  @media print { .gd-bar { display:none !important; } }
 </style>
 
 </head>
@@ -1233,6 +1244,11 @@
            onkeydown="onFindKey(event)" aria-label="Search the fleet" />
     <button class="find-clear" id="findClear" onclick="clearFind()" aria-label="Clear search">&#10005;</button>
     <div class="sugg" id="findSugg" role="listbox"></div>
+  </div>
+
+  <div class="gd-bar" id="gdBar" style="display:none;">
+    <span class="gd-ico" aria-hidden="true">&#9729;</span><span id="gdBarText" style="flex:1;"></span>
+    <button class="gd-bar-btn" onclick="gdBackupNow()">Back up now</button>
   </div>
 
   <div class="home-empty" id="homeEmpty">
@@ -1460,7 +1476,18 @@
       </div>
       <div class="sheet-sec">
         <h4>Inspection records</h4>
-        <div class="toggle-sub-text" style="margin-bottom:9px;">Reports and photos are stored on this device only. Back them up before changing phones.</div>
+        <div class="toggle-sub-text" style="margin-bottom:9px;">Reports and photos are stored on this phone. Turn on Google Drive backup so a lost or new phone loses nothing.</div>
+        <div class="gd-card">
+          <div class="gd-head"><span class="gd-ico" aria-hidden="true">&#9729;</span><b>Google Drive backup</b></div>
+          <div class="toggle-sub-text" id="gdStat" style="margin:4px 0 9px;"></div>
+          <div class="btn-row">
+            <button class="btn-secondary" id="gdConnectBtn" onclick="gdBackupNow()">Connect Google Drive</button>
+            <button class="btn-secondary" id="gdNowBtn" onclick="gdBackupNow()" style="display:none;">Back up now</button>
+            <button class="btn-secondary" id="gdRestoreBtn" onclick="gdRestore()">Restore from Drive</button>
+          </div>
+          <div class="btn-row" id="gdOffRow"><button class="btn-secondary danger-btn" id="gdOffBtn" onclick="gdDisconnect()" style="display:none;">Turn off Drive backup</button></div>
+        </div>
+        <div class="toggle-sub-text" style="margin:12px 0 9px;">Or keep a backup file yourself:</div>
         <div class="btn-row">
           <button class="btn-secondary" onclick="exportAllReports()">Export a backup</button>
           <button class="btn-secondary" onclick="document.getElementById('importFileInput').click()">Restore a backup</button>
@@ -7323,6 +7350,338 @@ function pbOpenCamera() {
     }
   });
 })();
+
+
+// ════════════════════════════════════════════════════════════════════════
+// v37 — GOOGLE DRIVE BACKUP
+// ════════════════════════════════════════════════════════════════════════
+// Every saved report and draft is copied to the inspector's own Google Drive,
+// in a folder named "Ayn Fleet backup", one file per report (photos inside).
+// Scope is drive.file: the app sees only the files it created, nothing else
+// in the person's Drive. Nothing goes to any server of ours.
+//
+// Google only hands a browser app a 1-hour key, and asking for a new one needs
+// a tap. So: with a live key, changes upload a few seconds after each save.
+// Without one, they wait in a queue and the home screen shows "Back up now".
+const GDRIVE_CLIENT_ID = '';   // set once the Google Cloud client exists
+const GD_SCOPE   = 'https://www.googleapis.com/auth/drive.file';
+const GD_STATE   = 'aynDrive';        // {on, email, folderId, files:{key:{id,savedAt}}, last}
+const GD_QUEUE   = 'aynDriveQueue';   // {key: 'up' | 'del'}
+const GD_TOKEN   = 'aynDriveToken';   // sessionStorage {t, exp}
+const GD_FOLDER  = 'Ayn Fleet backup';
+const GD_API     = 'https://www.googleapis.com/drive/v3';
+const GD_UPLOAD  = 'https://www.googleapis.com/upload/drive/v3';
+
+const gd = {
+  state() { try { return JSON.parse(localStorage.getItem(GD_STATE)) || { files: {} }; } catch (e) { return { files: {} }; } },
+  save(s) { try { localStorage.setItem(GD_STATE, JSON.stringify(s)); } catch (e) {} },
+  queue() { try { return JSON.parse(localStorage.getItem(GD_QUEUE)) || {}; } catch (e) { return {}; } },
+  saveQueue(q) { try { localStorage.setItem(GD_QUEUE, JSON.stringify(q)); } catch (e) {} },
+  token() {
+    try {
+      const t = JSON.parse(sessionStorage.getItem(GD_TOKEN));
+      return t && t.exp > Date.now() + 60000 ? t.t : '';
+    } catch (e) { return ''; }
+  },
+  busy: false,
+  timer: null,
+  tokenClient: null,
+  lastError: ''
+};
+
+function gdConfigured() { return !!GDRIVE_CLIENT_ID; }
+function gdOn() { return gdConfigured() && !!gd.state().on; }
+function gdPending() { return Object.keys(gd.queue()).length; }
+function gdIsReportKey(k) { return typeof k === 'string' && (k.startsWith('insp:') || k.startsWith('draft:')); }
+
+// Called by the storage layer for every write or delete of a report key.
+function gdNoteChange(key, kind) {
+  if (!gdOn() || !gdIsReportKey(key)) return;
+  const q = gd.queue();
+  if (kind === 'del') {
+    // Drafts are working copies: remove their Drive copy when they go.
+    // Finished reports stay in Drive even if deleted on the phone.
+    if (q[key] === 'up' && !gd.state().files[key]) { delete q[key]; }
+    else if (key.startsWith('draft:')) q[key] = 'del';
+  } else q[key] = 'up';
+  gd.saveQueue(q);
+  gdRender();
+  clearTimeout(gd.timer);
+  gd.timer = setTimeout(() => gdSync(false), 2500);
+}
+
+// Wrap the storage layer once, so every save path is covered without
+// touching the save functions themselves.
+(function gdHookStorage() {
+  if (!window.storage || window.storage.__gd) return;
+  const s = window.storage, set = s.set.bind(s), del = s.delete.bind(s);
+  s.set = async (k, v) => { const r = await set(k, v); if (!gd.restoring) gdNoteChange(k, 'up'); return r; };
+  s.delete = async k => { const r = await del(k); gdNoteChange(k, 'del'); return r; };
+  s.__gd = true;
+})();
+
+function gdLoadGis() {
+  if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const el = document.createElement('script');
+    el.src = 'https://accounts.google.com/gsi/client';
+    el.async = true;
+    el.onload = () => res();
+    el.onerror = () => rej(new Error('Could not reach Google. Check the internet connection.'));
+    document.head.appendChild(el);
+  });
+}
+
+// Must run inside a tap: Google opens its sign-in window from here.
+function gdAskToken(prompt) {
+  return new Promise((res, rej) => {
+    try {
+      if (!gd.tokenClient) {
+        gd.tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: GDRIVE_CLIENT_ID, scope: GD_SCOPE, callback: () => {}
+        });
+      }
+      gd.tokenClient.callback = r => {
+        if (r && r.access_token) {
+          try { sessionStorage.setItem(GD_TOKEN, JSON.stringify({ t: r.access_token, exp: Date.now() + (r.expires_in || 3600) * 1000 })); } catch (e) {}
+          res(r.access_token);
+        } else rej(new Error((r && r.error) || 'Google sign-in was cancelled'));
+      };
+      gd.tokenClient.error_callback = e => rej(new Error((e && e.type === 'popup_closed') ? 'Google sign-in was closed' : 'Google sign-in failed'));
+      gd.tokenClient.requestAccessToken({ prompt: prompt || '' });
+    } catch (e) { rej(e); }
+  });
+}
+
+async function gdFetch(url, opt) {
+  const t = gd.token();
+  if (!t) throw Object.assign(new Error('Google sign-in needed'), { needToken: true });
+  opt = opt || {};
+  opt.headers = Object.assign({ Authorization: 'Bearer ' + t }, opt.headers || {});
+  const r = await fetch(url, opt);
+  if (r.status === 401) {
+    try { sessionStorage.removeItem(GD_TOKEN); } catch (e) {}
+    throw Object.assign(new Error('Google sign-in expired'), { needToken: true });
+  }
+  if (!r.ok) {
+    let m = ''; try { m = (await r.json()).error.message; } catch (e) {}
+    throw new Error('Google Drive: ' + (m || r.status));
+  }
+  return r;
+}
+
+async function gdEnsureFolder() {
+  const st = gd.state();
+  if (st.folderId) {
+    try {
+      const f = await (await gdFetch(GD_API + '/files/' + st.folderId + '?fields=id,trashed')).json();
+      if (f && f.id && !f.trashed) return st.folderId;
+    } catch (e) { if (e.needToken) throw e; }
+  }
+  const q = encodeURIComponent("name='" + GD_FOLDER + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+  const found = await (await gdFetch(GD_API + '/files?q=' + q + '&fields=files(id)&spaces=drive')).json();
+  let id = found.files && found.files[0] && found.files[0].id;
+  if (!id) {
+    const made = await (await gdFetch(GD_API + '/files?fields=id', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: GD_FOLDER, mimeType: 'application/vnd.google-apps.folder' })
+    })).json();
+    id = made.id;
+  }
+  const s2 = gd.state(); s2.folderId = id; gd.save(s2);
+  return id;
+}
+
+function gdFileName(rec) {
+  const d = rec.inspData || {};
+  const clean = v => String(v || '').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const when = String(rec.savedAt || rec.createdAt || '').slice(0, 10);
+  const parts = [rec.isDraft || String(rec.id || '').startsWith('draft:') ? 'DRAFT' : clean(d.reportNum), clean(d.truckNo), when].filter(Boolean);
+  return (parts.join(' ') || rec.id.replace(/[^\w-]+/g, '_')) + '.json';
+}
+
+// Resumable upload works for any size, so reports with many photos go too.
+async function gdUpload(key, rec, folderId) {
+  const st = gd.state();
+  const known = st.files[key];
+  const meta = { name: gdFileName(rec), mimeType: 'application/json',
+                 appProperties: { aynKey: key, aynDraft: rec.isDraft ? '1' : '0' } };
+  if (!known) meta.parents = [folderId];
+  const body = JSON.stringify(rec);
+  const start = await gdFetch(GD_UPLOAD + '/files' + (known ? '/' + known.id : '') + '?uploadType=resumable&fields=id', {
+    method: known ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': 'application/json' },
+    body: JSON.stringify(meta)
+  });
+  const loc = start.headers.get('Location');
+  if (!loc) throw new Error('Google Drive did not accept the upload');
+  const done = await (await gdFetch(loc, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body })).json();
+  const s2 = gd.state();
+  s2.files[key] = { id: done.id || (known && known.id), savedAt: rec.savedAt || '', draft: !!rec.isDraft };
+  gd.save(s2);
+}
+
+async function gdTrash(key) {
+  const s = gd.state(), f = s.files[key];
+  if (f) {
+    try {
+      await gdFetch(GD_API + '/files/' + f.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) });
+    } catch (e) { if (e.needToken || !/404|not found/i.test(e.message)) throw e; }
+    const s2 = gd.state(); delete s2.files[key]; gd.save(s2);
+  }
+}
+
+// Upload whatever is queued. Never opens a Google window itself.
+async function gdSync(fromTap) {
+  if (!gdOn() || gd.busy) return;
+  if (!navigator.onLine) { gdRender(); return; }
+  if (!gd.token()) { gdRender(); return; }
+  gd.busy = true; gd.lastError = ''; gdRender();
+  let sent = 0;
+  try {
+    const folderId = await gdEnsureFolder();
+    const q = gd.queue();
+    for (const key of Object.keys(q)) {
+      if (q[key] === 'del') await gdTrash(key);
+      else {
+        const r = await window.storage.get(key);
+        if (r && r.value) { await gdUpload(key, JSON.parse(r.value), folderId); sent++; }
+      }
+      const q2 = gd.queue(); if (q2[key] === q[key]) { delete q2[key]; gd.saveQueue(q2); }
+      gdRender();
+    }
+    const s = gd.state(); s.last = new Date().toISOString(); gd.save(s);
+    if (fromTap) showToast(sent ? '☁ Backed up ' + sent + ' report' + (sent > 1 ? 's' : '') + ' to Google Drive' : '☁ Google Drive backup is up to date');
+  } catch (e) {
+    gd.lastError = e.needToken ? '' : (e.message || String(e));
+    if (fromTap && !e.needToken) showToast('Backup stopped: ' + gd.lastError);
+  } finally {
+    gd.busy = false; gdRender();
+  }
+}
+
+// The one button that may open Google's window. Always called from a tap.
+async function gdBackupNow() {
+  if (!gdConfigured()) { showToast('Google Drive backup is not set up in this app yet'); return; }
+  if (!navigator.onLine) { showToast('No internet. Reports will back up when you are online.'); return; }
+  try {
+    await gdLoadGis();
+    const first = !gd.state().on;
+    if (!gd.token()) await gdAskToken(first ? 'consent' : '');
+    if (first) {
+      const s = gd.state(); s.on = true;
+      try {
+        const a = await (await gdFetch(GD_API + '/about?fields=user(emailAddress)')).json();
+        s.email = (a.user && a.user.emailAddress) || '';
+      } catch (e) {}
+      gd.save(s);
+      // First connection: queue every report already on the phone.
+      const q = gd.queue();
+      for (const pre of ['insp:', 'draft:']) {
+        const list = await window.storage.list(pre);
+        (list && list.keys || []).forEach(k => { if (!gd.state().files[k]) q[k] = 'up'; });
+      }
+      gd.saveQueue(q);
+    }
+    await gdSync(true);
+  } catch (e) {
+    showToast(e.message || 'Google sign-in failed');
+    gdRender();
+  }
+}
+
+// Bring reports back from Drive onto this phone (new phone, or after a reset).
+async function gdRestore() {
+  if (!gdConfigured()) { showToast('Google Drive backup is not set up in this app yet'); return; }
+  if (!navigator.onLine) { showToast('Restoring needs an internet connection'); return; }
+  try {
+    await gdLoadGis();
+    if (!gd.token()) await gdAskToken(gd.state().on ? '' : 'consent');
+    const s = gd.state(); s.on = true; gd.save(s);
+    const folderId = await gdEnsureFolder();
+    const files = [];
+    let page = '';
+    do {
+      const q = encodeURIComponent("'" + folderId + "' in parents and trashed=false");
+      const r = await (await gdFetch(GD_API + '/files?q=' + q + '&fields=nextPageToken,files(id,name,appProperties)&pageSize=200' + (page ? '&pageToken=' + page : ''))).json();
+      (r.files || []).forEach(f => files.push(f));
+      page = r.nextPageToken || '';
+    } while (page);
+    if (!files.length) { showToast('No reports found in Google Drive yet'); gdRender(); return; }
+    const existing = new Set([...(((await window.storage.list('insp:')) || {}).keys || []), ...(((await window.storage.list('draft:')) || {}).keys || [])]);
+    let added = 0, kept = 0;
+    gd.restoring = true;
+    try {
+      for (const f of files) {
+        const key = f.appProperties && f.appProperties.aynKey;
+        if (!gdIsReportKey(key)) continue;
+        const s2 = gd.state(); s2.files[key] = { id: f.id, savedAt: '', draft: f.appProperties.aynDraft === '1' }; gd.save(s2);
+        if (existing.has(key)) { kept++; continue; }
+        const rec = await (await gdFetch(GD_API + '/files/' + f.id + '?alt=media')).json();
+        if (!rec || rec.id !== key) continue;
+        await window.storage.set(key, JSON.stringify(rec));
+        existing.add(key); added++;
+      }
+    } finally { gd.restoring = false; }
+    await seedReportCountersFromRecords();
+    if (typeof renderDrawer === 'function') renderDrawer();
+    showToast('☁ Restored ' + added + ' report' + (added === 1 ? '' : 's') + (kept ? ', ' + kept + ' already on this phone' : ''));
+  } catch (e) {
+    gd.restoring = false;
+    showToast(e.message || 'Restore failed');
+  }
+  gdRender();
+}
+
+function gdDisconnect() {
+  if (!confirm('Stop backing up to Google Drive on this phone?\n\nReports already in Drive stay there. Reports on this phone are not affected.')) return;
+  const t = gd.token();
+  try { if (t && window.google && window.google.accounts && window.google.accounts.oauth2) window.google.accounts.oauth2.revoke(t, () => {}); } catch (e) {}
+  try { sessionStorage.removeItem(GD_TOKEN); localStorage.removeItem(GD_STATE); localStorage.removeItem(GD_QUEUE); } catch (e) {}
+  gdRender();
+  showToast('Google Drive backup turned off');
+}
+
+function gdWhen(iso) {
+  if (!iso) return '';
+  const d = new Date(iso); if (isNaN(d)) return '';
+  return d.toLocaleDateString('en-SA', { day: '2-digit', month: 'short' }) + ', ' + d.toLocaleTimeString('en-SA', { hour: '2-digit', minute: '2-digit' });
+}
+
+function gdRender() {
+  const st = gd.state(), n = gdPending(), on = gdOn();
+  const stat = document.getElementById('gdStat');
+  if (stat) {
+    let t;
+    if (!gdConfigured()) t = 'Google Drive backup is not set up in this app yet.';
+    else if (!on) t = 'Off. Connect once and every saved report is copied to your own Google Drive.';
+    else {
+      t = 'On' + (st.email ? ' for ' + st.email : '') + '.';
+      if (gd.busy) t += ' Backing up now…';
+      else if (n) t += ' ' + n + ' waiting' + (navigator.onLine ? '.' : ', will go when online.');
+      else if (st.last) t += ' Up to date, last backup ' + gdWhen(st.last) + '.';
+      if (gd.lastError) t += ' Last try failed: ' + gd.lastError;
+    }
+    stat.textContent = t;
+  }
+  const show = (id, v) => { const e = document.getElementById(id); if (e) e.style.display = v ? '' : 'none'; };
+  show('gdConnectBtn', gdConfigured() && !on);
+  show('gdNowBtn', on);
+  show('gdRestoreBtn', gdConfigured());
+  show('gdOffBtn', on);
+  const bar = document.getElementById('gdBar');
+  if (bar) {
+    const need = on && n > 0 && navigator.onLine && !gd.busy && !gd.token();
+    bar.style.display = need ? 'flex' : 'none';
+    const bt = document.getElementById('gdBarText');
+    if (bt) bt.textContent = n + ' report' + (n > 1 ? 's' : '') + ' not backed up yet';
+  }
+}
+
+window.addEventListener('online', () => { gdRender(); gdSync(false); });
+window.addEventListener('offline', gdRender);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { gdRender(); gdSync(false); } });
+setTimeout(() => { gdRender(); gdSync(false); }, 1500);
 
 </script>
 
