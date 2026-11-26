@@ -7950,7 +7950,8 @@ function buildReportDoc(style) {
     <tr><td class="rd-lab">Inspector</td><td>${v(inspData.inspectorName)}</td><td class="rd-lab">Date</td><td>${esc(rdDate())}</td></tr></table>`;
 
   const box = (n, l, col) => `<div class="rd-box"><div class="rd-n"${col ? ` style="color:${col}"` : ''}>${n}</div><div class="rd-lab rd-up">${l}</div></div>`;
-  const resultRow = `<div class="rd-res">${box(items.length, 'Points checked')}${box(oks.length, 'Satisfactory')}
+  const unmarked = items.length - oks.length - fails.length;
+  const resultRow = `<div class="rd-res">${box(oks.length + fails.length, 'Points checked' + (unmarked ? ' (' + unmarked + ' not marked)' : ''))}${box(oks.length, 'Satisfactory')}
     ${box(fails.length, 'Issues' + (res.high ? ' (' + res.high + ' high)' : ''), fails.length ? '#B00020' : '')}
     <div class="rd-verdict" style="border-color:${res.col};color:${res.col}"><div class="rd-lab rd-up" style="color:${res.col}">Result</div>
     <div class="rd-vl">${res.label}</div><div class="rd-vs">${res.sub}</div></div></div>`;
@@ -8177,10 +8178,14 @@ function srvPayload(rec, withAll) {
   const copy = Object.assign({}, rec); delete copy.signature;
   if (copy.inspData) { copy.inspData = Object.assign({}, copy.inspData); delete copy.inspData.signature; }
   const full = JSON.stringify(strip(copy));
+  // Reports made before FSL and make were saved: fill them from the fleet list.
+  const normP = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const unit = (!d.fsl || !d.make) && typeof FLEET_DATA !== 'undefined'
+    ? FLEET_DATA.find(u => normP(u.plate) && normP(u.plate) === normP(d.truckNo || rec.truckNo)) : null;
   return {
     full, extraPhotos: extra,
     reportId: rec.id, reportNum: rec.reportNum || d.reportNum || '', date: day,
-    plate: d.truckNo || rec.truckNo || '', fsl: d.fsl || '', vehType: d.vehType || rec.vehType || '', make: d.make || '',
+    plate: d.truckNo || rec.truckNo || '', fsl: d.fsl || (unit && unit.fsl) || '', vehType: d.vehType || rec.vehType || '', make: d.make || (unit && (unit.manufacturer || unit.make)) || '',
     driver: (d.driverName && d.driverName !== '—') ? d.driverName : '', site: (d.location && d.location !== '—') ? d.location : '',
     inspector: d.inspectorName || rec.inspector || '',
     points: its.length, ok, issues: fails.length, high, result,

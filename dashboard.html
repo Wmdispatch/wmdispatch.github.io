@@ -128,11 +128,11 @@
     const fit = ins.filter(x => x.result === 'Fit for use').length, notFit = ins.filter(x => x.result === 'Not fit for use').length;
     const open = iss.filter(x => x.status !== 'Fixed'), highOpen = open.filter(x => x.priority === 'High').length;
     const fixed = iss.filter(x => x.status === 'Fixed').length;
-    const pts = ins.reduce((a, x) => a + (+x.points || 0), 0), okp = ins.reduce((a, x) => a + (+x.ok || 0), 0);
+    const okp = ins.reduce((a, x) => a + (+x.ok || 0), 0), pts = ins.reduce((a, x) => a + (+x.ok || 0) + (+x.issues || 0), 0);
     const k = (n, l, s, c) => `<div class="kpi"><div class="n"${c ? ` style="color:${c}"` : ''}>${n}</div><div class="l">${l}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
     $('kpis').innerHTML = k(ins.length, 'Inspections', vehicles + ' vehicles') + k(pct(fit, ins.length), 'Fit for use', fit + ' of ' + ins.length, '#1D7A3E') +
       k(notFit, 'Not fit for use', pct(notFit, ins.length) + ' of inspections', notFit ? '#B00020' : '') +
-      k(pct(okp, pts), 'Points satisfactory', okp + ' of ' + pts + ' points') + k(iss.length, 'Issues found', (ins.length ? (iss.length / ins.length).toFixed(1) : 0) + ' per inspection') +
+      k(pct(okp, pts), 'Points satisfactory', okp + ' of ' + pts + ' points marked') + k(iss.length, 'Issues found', (ins.length ? (iss.length / ins.length).toFixed(1) : 0) + ' per inspection') +
       k(open.length, 'Issues not fixed', highOpen + ' high priority', open.length ? '#A15C00' : '') + k(pct(fixed, iss.length), 'Fixed by workshop', fixed + ' of ' + iss.length, '#1D7A3E');
 
     bars($('cResult'), [['Fit for use', fit, '#1D7A3E'], ['Fit with conditions', ins.filter(x => x.result === 'Fit with conditions').length, '#A15C00'], ['Not fit for use', notFit, '#B00020']]);
