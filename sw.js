@@ -1,8 +1,8 @@
-/* Ayn Fleet: service worker (ships with app v49)
+/* Ayn Fleet: service worker (ships with app v50)
    Goal: after ONE successful visit the app works with no network at all —
    no reload, no spinner, no "you are offline" page. */
 
-const CACHE = 'fleet-inspect-shell-v19';
+const CACHE = 'fleet-inspect-shell-v20';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png',
@@ -53,12 +53,17 @@ self.addEventListener('fetch', e => {
     }).catch(async () => (await caches.match(req, { ignoreSearch: true })) || new Response('Offline', { status: 504 })));
     return;
   }
+  // v50: only the app's own page is served from cache. Any other address on the
+  // site (assetlinks.json, README) goes to the network untouched, and nothing but
+  // a real HTML page may ever replace the cached app.
+  const isApp = /\/(index\.html)?$/.test(path);
+  if (req.mode === 'navigate' && !isApp) return;
   if (req.mode === 'navigate') {
     e.respondWith((async () => {
       const cached = (await caches.match('./index.html', { ignoreSearch: true })) ||
                      (await caches.match('./', { ignoreSearch: true }));
       const network = fetch(req).then(async res => {
-        if (res && res.ok) {
+        if (res && res.ok && /text\/html/.test(res.headers.get('content-type') || '')) {
           const c = await caches.open(CACHE);
           c.put('./index.html', res.clone());
         }
