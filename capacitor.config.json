@@ -1,0 +1,8 @@
+{
+  "appId": "com.wmdispatch.aynfleet",
+  "appName": "Ayn Fleet",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

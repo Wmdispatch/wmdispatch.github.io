@@ -2185,6 +2185,13 @@ function useFallbackManifest(reason) {
 if ('serviceWorker' in navigator &&
     (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   window.addEventListener('load', () => {
+    // v53: inside the Android app built with Capacitor the files ship inside the
+    // app itself, so no offline worker is used there (it would keep old files
+    // after an app update).
+    if (window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform()) {
+      navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(() => {});
+      return;
+    }
     navigator.serviceWorker.register('sw.js').then(reg => {
       INSTALL_DIAG.swRegistered = true; _diagChanged();
 
@@ -2224,7 +2231,7 @@ if ('serviceWorker' in navigator &&
 }
 
 // v45: version shown in Settings, and a manual "Check for updates".
-const APP_VERSION = '52';
+const APP_VERSION = '53';
 async function checkForUpdates() {
   const out = document.getElementById('updStat');
   const say = t => { if (out) out.textContent = t; };

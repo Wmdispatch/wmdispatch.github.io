@@ -1,0 +1,116 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BUILD_NUMBER: ${{ github.run_number }}
+      HAS_KEY: ${{ secrets.KEYSTORE_BASE64 != '' }}
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Python (for the app icon)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install packages
+        run: |
+          npm ci
+          pip install pillow
+
+      - name: Copy the app files into www/
+        run: npm run build
+
+      - name: Create the Android project
+        run: |
+          npx cap add android
+          node scripts/patch-android.mjs
+
+      - name: Make the app icon
+        run: |
+          mkdir -p assets
+          python scripts/make-icons.py
+          npx @capacitor/assets generate --android --iconBackgroundColor '#eef2f0' --iconBackgroundColorDark '#eef2f0' --splashBackgroundColor '#eef2f0' --splashBackgroundColorDark '#eef2f0'
+
+      - name: Copy web files into the Android project
+        run: npx cap sync android
+
+      - name: Build the debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload the debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      # Signed release APK: runs only when the four signing secrets exist
+      # (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD).
+      # Every release is signed with the same key, so it installs over the last one
+      # and keeps the reports on the phone.
+      - name: Build the signed release APK
+        if: env.HAS_KEY == 'true'
+        working-directory: android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/zipalign" -p -f 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/aligned.apk"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/release.keystore" --ks-pass env:KEYSTORE_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD \
+            --out "$GITHUB_WORKSPACE/ayn-fleet-release.apk" "$RUNNER_TEMP/aligned.apk"
+          "$BT/apksigner" verify --print-certs "$GITHUB_WORKSPACE/ayn-fleet-release.apk" | head -3
+          rm -f "$RUNNER_TEMP/release.keystore"
+
+      - name: Upload the signed release APK
+        if: env.HAS_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-release
+          path: ayn-fleet-release.apk
+          if-no-files-found: error
+
+      - name: Summary
+        run: |
+          echo "### Ayn Fleet APK, build ${BUILD_NUMBER}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download it from **Artifacts** at the bottom of this page." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$HAS_KEY" != "true" ]; then
+            echo "Signing secrets are not set, so only the debug APK was built. Each debug build has a different key and will not install over the last one." >> "$GITHUB_STEP_SUMMARY"
+          fi
