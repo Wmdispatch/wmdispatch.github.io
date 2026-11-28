@@ -782,6 +782,9 @@
     body.combo-print #comboOverlay { display: block !important; position: static !important; overflow: visible !important; background: #fff !important; }
     body.combo-print .combo-toolbar { display: none !important; }
     body.combo-print .combo-inner { max-width: none; padding: 0; }
+    body.combo-print .rdoc { border:none; padding:0; border-radius:0; font-size:9.5pt; }
+    body.combo-print .rdoc .rd-thumbs img { height:20mm; }
+    body.combo-print .rdoc .rd-veh { break-inside:auto; }
     body.combo-print #comboOverlay, body.combo-print #comboOverlay .combo-title,
     body.combo-print #comboOverlay td, body.combo-print #comboOverlay .combo-veh-name,
     body.combo-print #comboOverlay .combo-issue-name, body.combo-print #comboOverlay .combo-issue-note,
@@ -1176,8 +1179,8 @@
       border-radius:20px; border:1px solid transparent; background:transparent; color:var(--muted); }
     #settingsSheet .sheet-tab.on { background:var(--accent); color:#fff; border-color:var(--accent); }
     #settingsSheet .sheet-sec { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; margin:0 0 12px; }
-    #settingsSheet #spane-app .sheet-sec { background:transparent; border:none; padding:0; margin:0 0 16px; }
-    #settingsSheet #spane-app .sheet-sec > h4 { margin:0 4px 8px; }
+    #settingsSheet #spane-app .sheet-sec { background:transparent !important; border:none !important; box-shadow:none !important; padding:0 !important; margin:0 0 18px !important; }
+    #settingsSheet #spane-app .sheet-sec > h4 { margin:2px 4px 8px !important; }
     #settingsSheet .sheet-sec > h4 { font-family:inherit; font-size:11.5px; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
       color:var(--muted); margin:0 0 10px; }
     #settingsSheet .btn-secondary, body.big-touch #settingsSheet .btn-secondary {
@@ -1224,6 +1227,8 @@
     .prev-box .pv-list li { display:flex; flex-direction:column; padding:6px 0 6px 17px; border-top:1px solid var(--border); font-size:13px; }
     .prev-box .pv-list li span { color:var(--muted); font-size:12.5px; } .prev-box .pv-more { color:var(--accent) !important; font-weight:700; }
   }
+  .rdoc .rd-veh { margin-top:14px; } .rdoc .rd-veh-h { border-bottom:1.5pt solid; padding:4px 0; font-size:12.5px; }
+  .rdoc .rd-veh-m { font-size:10px; color:#444; margin:3px 0 6px; }
   .rdoc .rd-prevline { font-size:10px; color:#444; margin:-2px 0 5px; }
 
   @media screen {
@@ -1246,6 +1251,48 @@
     .unit-card.idle > :not(.stage-wrap) { display:none !important; }
     .unit-card.idle { margin-top:14px !important; }
     .unit-card.idle .stage-wrap { border-radius:inherit; }
+  }
+
+  @media screen {
+    #savedDrawer .drawer-body { padding:0 14px 20px; }
+    .sv-tools { position:sticky; top:0; z-index:2; background:var(--bg); padding:10px 0 8px; }
+    .sv-tabs { display:flex; background:#e4ebe7; border-radius:12px; padding:3px; gap:3px; }
+    .sv-tabs button { flex:1; border:none; background:transparent; border-radius:9px; padding:9px; font:inherit; font-size:14px; font-weight:700; color:#4a5a53; cursor:pointer; }
+    .sv-tabs button.on { background:#fff; color:var(--accent2); box-shadow:0 1px 3px rgba(16,32,26,.12); }
+    .sv-tabs button span { font-size:12px; color:var(--muted); margin-left:4px; }
+    .sv-search { width:100%; margin-top:8px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font:inherit; font-size:14px; background:#fff; }
+    .sv-month { font-size:12.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#33453d; margin:14px 2px 6px; }
+    .sv-row { display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px 12px 12px 14px; margin-bottom:8px; }
+    .sv-main { flex:1; min-width:0; }
+    .sv-top { display:flex; align-items:center; gap:8px; }
+    .sv-plate { font-size:16.5px; font-weight:800; letter-spacing:.5px; color:#10201a; }
+    .sv-type { font-size:13.5px; font-weight:600; color:#33453d; margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sv-meta { font-size:12.5px; font-weight:500; color:#5f7068; margin-top:2px; }
+    .sv-res { font-size:11.5px; font-weight:800; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+    .sv-res.ok { background:#e3f4ea; color:#1D7A3E; } .sv-res.mid { background:#fff3e0; color:#A15C00; } .sv-res.bad { background:#fde8eb; color:#B00020; }
+    .sv-res.draft { background:#eef1ef; color:#4a5a53; }
+    .sv-acts { display:flex; flex-direction:column; gap:6px; align-items:stretch; }
+    .sv-btn { border:1px solid var(--border); background:#fff; color:var(--accent2); border-radius:10px; padding:8px 14px; font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; }
+    .sv-btn.pri { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .sv-icon { border:1px solid #f1c9cf; background:#fff; color:#B00020; border-radius:10px; padding:6px; font-size:14px; cursor:pointer; }
+    .sv-check { display:flex; align-items:center; } .sv-check input { width:22px; height:22px; accent-color:var(--accent); }
+    .sv-combo { display:flex !important; align-items:center; gap:8px; background:var(--tint); border:1px solid #bfe3d2; border-radius:12px; padding:9px 10px; margin:4px 0 6px; font-size:13.5px; color:var(--accent2); }
+    .sv-combo span { flex:1; }
+    #comboBar .sv-btn { font-family:inherit; font-size:13.5px; letter-spacing:0; padding:8px 12px; border-radius:10px; }
+    #comboBar .sv-btn:not(.pri) { background:#fff; border:1px solid var(--border); color:var(--accent2); }
+    .sv-combo-hint { margin:2px 0 2px; } .sv-link { background:none; border:none; padding:6px 2px; font:inherit; font-size:13.5px; font-weight:700; color:var(--accent); cursor:pointer; }
+    .sv-prog { height:5px; background:#e4ebe7; border-radius:4px; overflow:hidden; margin-top:7px; } .sv-prog > div { height:100%; background:var(--accent); }
+    .sv-empty { text-align:center; color:var(--muted); font-size:13.5px; padding:30px 10px; }
+  }
+  @media screen { .combo-toolbar button { font-family:inherit !important; letter-spacing:0 !important; font-size:14.5px !important; } }
+
+  @media screen {
+    #savedDrawer { width:min(100vw, 480px) !important; max-width:100vw !important; }
+    #savedDrawer .drawer-title { font-size:24px !important; font-weight:800 !important; letter-spacing:0 !important; text-transform:none !important; color:#10201a !important; }
+  }
+  @media print {
+    html:has(body.combo-print), body.combo-print, body.combo-print #comboOverlay, body.combo-print .combo-inner { background:#fff !important; min-height:0 !important; height:auto !important; }
+    body.combo-print .rdoc .rd-veh-h, body.combo-print .rdoc .rd-veh-m { break-after:avoid; page-break-after:avoid; }
   }
 </style>
 
@@ -1344,14 +1391,10 @@
 <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
 <div class="drawer" id="savedDrawer">
   <div class="drawer-header">
-    <div class="drawer-title">Saved Inspections</div>
+    <div class="drawer-title">Saved</div>
     <button class="drawer-close" aria-label="Close saved inspections" onclick="closeDrawer()">&#10005;</button>
   </div>
-  <div style="display:flex;gap:8px;padding:10px 14px 4px;">
-    <button onclick="exportAllReports()" aria-label="Export all saved inspections as a backup file" style="flex:1;padding:9px;background:var(--surface);border:1.5px solid var(--accent);border-radius:8px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;letter-spacing:0.5px;">⬆ EXPORT BACKUP</button>
-    <button onclick="document.getElementById('importFileInput').click()" aria-label="Import inspections from a backup file" style="flex:1;padding:9px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;letter-spacing:0.5px;">⬇ IMPORT</button>
-    <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;" onchange="importReportsFromFile(this)">
-  </div>
+  <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;" onchange="importReportsFromFile(this)">
   <div class="drawer-body" id="drawerBody"></div>
 </div>
 
@@ -1364,7 +1407,7 @@
     </div>
   </div>
   <div class="hdr-actions" style="display:flex;align-items:center;">
-    <span class="nv-pill" id="offlinePill" title="Offline status"><span class="dot"></span><span id="offlinePillText">Ready</span></span>
+    <span class="nv-pill" id="offlinePill" style="display:none" aria-hidden="true"><span class="dot"></span><span id="offlinePillText">Ready</span></span>
     <button class="header-saved-btn" onclick="openDrawer()" aria-label="Saved reports and drafts">&#128196;</button>
     <button class="icon-btn" onclick="openSettings()" aria-label="Settings" title="Settings">&#9881;</button>
   </div>
@@ -1689,15 +1732,7 @@
           <div class="st-status" id="updStat"></div>
           <div class="st-actions"><button class="st-btn pri" onclick="checkForUpdates()">Check for updates</button></div>
         </div>
-        <div class="st-card">
-          <div class="st-head"><div><div class="st-title">Install and offline</div>
-            <div class="st-sub">Opens full screen and works with no signal</div></div></div>
-          <div id="installDiag" class="inst-diag">Checking&hellip;</div>
-          <div class="st-actions">
-            <button class="st-btn" id="installNowBtn" style="display:none;" onclick="triggerInstall()">Install app</button>
-            <button class="st-btn" onclick="renderInstallDiag(true)">Check again</button>
-          </div>
-        </div>
+        <div style="display:none" aria-hidden="true"><div id="installDiag" class="inst-diag"></div><button id="installNowBtn"></button></div>
         <div class="st-card st-danger">
           <div class="st-head"><div><div class="st-title">Start fresh</div>
             <div class="st-sub">Deletes all reports and drafts on this phone and restarts numbering at 0001. Fleet list, company, signature and sync stay.</div></div></div>
@@ -2150,7 +2185,7 @@ if ('serviceWorker' in navigator &&
 }
 
 // v45: version shown in Settings, and a manual "Check for updates".
-const APP_VERSION = '45';
+const APP_VERSION = '46';
 async function checkForUpdates() {
   const out = document.getElementById('updStat');
   const say = t => { if (out) out.textContent = t; };
@@ -4753,204 +4788,104 @@ function closeDrawer() {
   document.getElementById('savedDrawer').classList.remove('open');
 }
 
+// v46: Saved, redesigned. One list with tabs (Reports, Drafts), search,
+// month headings, a clear result chip per report, and a select mode for the
+// combined report.
+let svTab = 'reports', svSelecting = false;
+function svResult(rec) {
+  const fails = (rec.items || []).filter(i => i.status === 'fail');
+  if (!fails.length) return ['Fit for use', 'ok'];
+  return fails.some(i => itemPriority(i) === 'High') ? ['Not fit', 'bad'] : ['Conditions', 'mid'];
+}
+function svDay(d) { const x = new Date(d); return isNaN(x) ? '' : x.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function svMonth(d) { const x = new Date(d); return isNaN(x) ? 'Undated' : x.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
+function svSetTab(t) { svTab = t; renderDrawer(); }
+function svToggleSelect() { svSelecting = !svSelecting; if (!svSelecting) clearComboSelection(); renderDrawer(); }
+function svFilter(q) {
+  q = String(q || '').toLowerCase().replace(/\s+/g, '');
+  document.querySelectorAll('#drawerBody .sv-row').forEach(r => { r.style.display = !q || r.dataset.q.includes(q) ? '' : 'none'; });
+  document.querySelectorAll('#drawerBody .sv-month').forEach(m => {
+    let n = m.nextElementSibling, any = false;
+    while (n && !n.classList.contains('sv-month')) { if (n.classList.contains('sv-row') && n.style.display !== 'none') any = true; n = n.nextElementSibling; }
+    m.style.display = any ? '' : 'none';
+  });
+}
+
 async function renderDrawer() {
   const body = document.getElementById('drawerBody');
-  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;">⏳ Loading saved data...</div>';
+  const keepQ = (document.getElementById('svSearch') || {}).value || '';
+  body.innerHTML = '<div class="sv-empty">Loading…</div>';
   try {
-    // Load all inspections from window.storage
-    const inspKeys = await window.storage.list('insp:');
     const saved = [];
-    if (inspKeys && inspKeys.keys && inspKeys.keys.length > 0) {
-      for (const key of inspKeys.keys) {
-        try {
-          const r = await window.storage.get(key);
-          if (r && r.value) {
-            const parsed = JSON.parse(r.value);
-            if (parsed && parsed.id) saved.push(parsed); // skip malformed records
-          }
-        } catch(e) {
-          console.warn('Skipping corrupted record:', key, e);
-        }
-      }
+    const inspKeys = await window.storage.list('insp:');
+    for (const key of (inspKeys && inspKeys.keys) || []) {
+      try { const r = await window.storage.get(key); if (r && r.value) { const p = JSON.parse(r.value); if (p && p.id) saved.push(p); } }
+      catch (e) { console.warn('Skipping corrupted record:', key, e); }
     }
-    // Sort newest first by date
-    saved.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
-
+    saved.sort((a, b) => (new Date(b.date || 0) - new Date(a.date || 0)) || String(b.id).localeCompare(String(a.id)));
     const drafts = await loadDrafts();
-    let html = '';
 
-    // ── DRAFTS SECTION ──────────────────────────────────────────────
-    html += `<div style="background:linear-gradient(135deg,rgba(224,123,0,0.12),rgba(224,123,0,0.06));border:2px solid rgba(224,123,0,0.3);border-radius:12px;margin-bottom:14px;overflow:hidden;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(224,123,0,0.2);">
-        <div style="display:flex;align-items:center;gap:7px;">
-          <span style="font-size:16px;">📝</span>
-          <span style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;">Drafts</span>
-        </div>
-        <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(224,123,0,0.2);color:var(--accent);">${drafts.length}</span>
+    let html = `<div class="sv-tools">
+      <div class="sv-tabs" role="tablist">
+        <button class="${svTab === 'reports' ? 'on' : ''}" onclick="svSetTab('reports')">Reports <span>${saved.length}</span></button>
+        <button class="${svTab === 'drafts' ? 'on' : ''}" onclick="svSetTab('drafts')">Drafts <span>${drafts.length}</span></button>
       </div>
-      <div style="padding:10px;">`;
+      <input id="svSearch" class="sv-search" type="search" placeholder="Search plate, report no., site" value="${esc(keepQ)}" oninput="svFilter(this.value)">
+    </div>`;
 
-    if (drafts.length === 0) {
-      html += `<div style="text-align:center;color:var(--muted);font-size:12px;padding:12px 0;">No drafts saved yet.<br>Tap "💾 Save as Draft" during an inspection.</div>`;
-    } else {
-      // Group drafts by Month > Day (same structure as completed reports)
-      const dGroups = {};
-      drafts.forEach(draft => {
-        const dt = draft.savedAt ? new Date(draft.savedAt) : null;
-        const mKey = dt ? dt.toLocaleString('en-SA',{month:'long',year:'numeric'}) : 'Unknown Date';
-        const dKey = dt ? String(dt.getDate()).padStart(2,'0') + ' ' + dt.toLocaleString('en-SA',{weekday:'short'}) : '—';
-        if (!dGroups[mKey]) dGroups[mKey] = {};
-        if (!dGroups[mKey][dKey]) dGroups[mKey][dKey] = [];
-        dGroups[mKey][dKey].push(draft);
-      });
-
-      Object.keys(dGroups).forEach((mKey, mi) => {
-        const mId = 'dmonth_' + mi;
-        const totalInMonth = Object.values(dGroups[mKey]).reduce((a,b)=>a+b.length,0);
-        html += `<div style="margin-bottom:6px;">
-          <div onclick="toggleGroup('${mId}')" style="display:flex;align-items:center;justify-content:space-between;background:rgba(224,123,0,0.08);border:1.5px solid rgba(224,123,0,0.3);border-radius:10px;padding:10px 14px;cursor:pointer;user-select:none;">
-            <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--accent);">📅 ${esc(mKey)}</div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-size:11px;background:rgba(224,123,0,0.2);color:var(--accent);border-radius:20px;padding:2px 8px;font-weight:700;">${totalInMonth}</span>
-              <span id="${mId}_arrow" style="font-size:12px;color:var(--accent);transition:transform 0.2s;">▼</span>
-            </div>
+    if (svTab === 'reports') {
+      if (saved.length) {
+        html += svSelecting
+          ? `<div id="comboBar" class="sv-combo show"><span><b id="comboCount">${comboSelection.size}</b> selected</span>
+               <button class="sv-btn pri" onclick="generateComboReport()">Make combined report</button>
+               <button class="sv-btn" onclick="svToggleSelect()">Cancel</button></div>`
+          : `<div class="sv-combo-hint"><button class="sv-link" onclick="svToggleSelect()">Select reports for a combined report</button></div>`;
+      }
+      if (!saved.length) html += '<div class="sv-empty">No reports yet. Finished inspections appear here.</div>';
+      let month = '';
+      saved.forEach(rec => {
+        const m = svMonth(rec.date);
+        if (m !== month) { month = m; html += `<div class="sv-month">${esc(m)}</div>`; }
+        const res = svResult(rec), d = rec.inspData || {};
+        const q = [rec.truckNo, rec.reportNum, rec.location, rec.vehType, d.driverName, d.fsl].join(' ').toLowerCase().replace(/\s+/g, '');
+        const n = rec.failCount || 0;
+        html += `<div class="sv-row" data-q="${esc(q)}">
+          ${svSelecting ? `<label class="sv-check"><input type="checkbox" class="combo-check" data-key="${esc(rec.id)}" ${comboSelection.has(rec.id) ? 'checked' : ''} aria-label="Include in combined report"></label>` : ''}
+          <div class="sv-main">
+            <div class="sv-top"><span class="sv-plate">${esc(rec.truckNo || '—')}</span><span class="sv-res ${res[1]}">${res[0]}</span></div>
+            <div class="sv-type">${esc(rec.vehType || '')}${rec.location && rec.location !== '—' ? ' · ' + esc(rec.location) : ''}</div>
+            <div class="sv-meta">${esc(rec.reportNum || '')} · ${esc(svDay(rec.date))} · ${n ? n + ' issue' + (n > 1 ? 's' : '') : 'no issues'}</div>
           </div>
-          <div id="${mId}" style="display:none;padding-left:8px;margin-top:4px;">`;
-
-        Object.keys(dGroups[mKey]).forEach((dKey, di) => {
-          const dayId = mId + '_day_' + di;
-          const dayDrafts = dGroups[mKey][dKey];
-          html += `<div style="margin-bottom:4px;">
-            <div onclick="toggleGroup('${dayId}')" style="display:flex;align-items:center;justify-content:space-between;background:rgba(224,123,0,0.06);border:1px solid rgba(224,123,0,0.2);border-radius:8px;padding:7px 12px;cursor:pointer;user-select:none;">
-              <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">📆 ${esc(dKey)}</div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="font-size:10px;color:var(--muted);">${dayDrafts.length} draft${dayDrafts.length>1?'s':''}</span>
-                <span id="${dayId}_arrow" style="font-size:11px;color:var(--muted);">▼</span>
-              </div>
-            </div>
-            <div id="${dayId}" style="display:none;padding-left:6px;margin-top:3px;">`;
-
-          dayDrafts.forEach(draft => {
-            const t = draft.savedAt ? new Date(draft.savedAt).toLocaleTimeString('en-SA',{hour:'2-digit',minute:'2-digit'}) : '—';
-            const done = draft.items ? draft.items.filter(x=>x.status!==null).length : 0;
-            const total = draft.items ? draft.items.length : 0;
-            const pct = total > 0 ? Math.round((done/total)*100) : 0;
-            html += `<div style="background:var(--card);border:1.5px solid rgba(224,123,0,0.25);border-left:4px solid var(--accent);border-radius:10px;padding:11px 13px;margin-bottom:8px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
-                <div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--text);">${esc((draft.inspData&&draft.inspData.vehType)||'—')}</div>
-                <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(224,123,0,0.15);color:var(--accent);">DRAFT</span>
-              </div>
-              <div style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:2px;">${esc((draft.inspData&&draft.inspData.truckNo)||'—')}</div>
-              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">🕐 ${esc(t)} &nbsp;·&nbsp; Inspector: ${esc((draft.inspData&&draft.inspData.inspectorName)||'—')}</div>
-              <div style="background:var(--border);border-radius:4px;height:5px;margin-bottom:5px;overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:4px;"></div>
-              </div>
-              <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">${done} / ${total} checked &nbsp;(${pct}%)${draft.revision > 1 ? ` &nbsp;·&nbsp; rev ${esc(draft.revision)}` : ''}</div>
-              <div style="display:flex;gap:6px;">
-                <button class="drawer-action-btn" data-action="resume-draft" data-id="${esc(draft.id)}" style="flex:1;padding:7px;background:var(--accent);border:none;border-radius:7px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Rajdhani',sans-serif;letter-spacing:0.5px;">▶ Resume</button>
-                <button class="drawer-action-btn" data-action="delete-draft" data-id="${esc(draft.id)}" aria-label="Delete this draft" style="padding:7px 12px;background:transparent;border:1.5px solid rgba(212,43,43,0.3);border-radius:7px;color:var(--danger);font-size:12px;font-weight:600;cursor:pointer;">🗑</button>
-              </div>
-            </div>`;
-          });
-
-          html += `</div></div>`;
-        });
-
-        html += `</div></div>`;
+          ${svSelecting ? '' : `<div class="sv-acts">
+            <button class="sv-btn pri drawer-action-btn" data-action="view-report" data-key="${esc(rec.id)}">Open</button>
+            <button class="sv-icon drawer-action-btn" data-action="delete-saved" data-key="${esc(rec.id)}" aria-label="Delete report">&#128465;</button></div>`}
+        </div>`;
       });
-    }
-    html += `</div></div>`;
-
-    // ── COMPLETED REPORTS SECTION ────────────────────────────────────
-    html += `<div style="background:var(--surface);border:2px solid var(--border);border-radius:12px;overflow:hidden;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--card);">
-        <div style="display:flex;align-items:center;gap:7px;">
-          <span style="font-size:16px;">📄</span>
-          <span style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:1px;">Completed Reports</span>
-        </div>
-        <span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(90,106,126,0.15);color:var(--muted);">${saved.length}</span>
-      </div>
-      <div style="padding:10px;">`;
-
-    // v26: combined comprehensive report — appears once ≥1 report is ticked below
-    if (saved.length > 0) {
-      html += `<div id="comboBar" class="${comboSelection.size ? 'show' : ''}">
-        <button onclick="generateComboReport()" style="flex:1;background:var(--accent);border:none;color:#fff;">&#128209; Combined Report (<span id="comboCount">${comboSelection.size}</span>)</button>
-        <button onclick="clearComboSelection()" style="background:transparent;border:1.5px solid rgba(224,123,0,0.4);color:var(--accent);">Clear</button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Tick reports below to build one comprehensive multi-vehicle PDF.</div>`;
-    }
-
-    if (saved.length === 0) {
-      html += `<div style="text-align:center;color:var(--muted);font-size:12px;padding:12px 0;">No completed reports yet.<br>Generate a report to save it here.</div>`;
     } else {
-      // Group by Month > Day
-      const groups = {};
-      saved.forEach((rec) => {
-        const dt = rec.date ? new Date(rec.date) : null;
-        const monthKey = dt ? dt.toLocaleString('en-SA', {month:'long', year:'numeric'}) : 'Unknown Date';
-        const dayKey = dt ? String(dt.getDate()).padStart(2,'0') + ' ' + dt.toLocaleString('en-SA',{weekday:'short'}) : '—';
-        if (!groups[monthKey]) groups[monthKey] = {};
-        if (!groups[monthKey][dayKey]) groups[monthKey][dayKey] = [];
-        groups[monthKey][dayKey].push(rec);
-      });
-
-      Object.keys(groups).forEach((monthKey, mi) => {
-        const monthId = 'month_' + mi;
-        const totalInMonth = Object.values(groups[monthKey]).reduce((a,b)=>a+b.length,0);
-        html += `<div style="margin-bottom:6px;">
-          <div onclick="toggleGroup('${monthId}')" style="display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;cursor:pointer;user-select:none;">
-            <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text);">📅 ${esc(monthKey)}</div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-size:11px;background:rgba(224,123,0,0.12);color:var(--accent);border-radius:20px;padding:2px 8px;font-weight:700;">${totalInMonth}</span>
-              <span id="${monthId}_arrow" style="font-size:12px;color:var(--muted);transition:transform 0.2s;">▼</span>
-            </div>
+      if (!drafts.length) html += '<div class="sv-empty">No drafts. Use Save draft during an inspection.</div>';
+      let month = '';
+      drafts.forEach(dr => {
+        const d = dr.inspData || {}, m = svMonth(dr.savedAt);
+        if (m !== month) { month = m; html += `<div class="sv-month">${esc(m)}</div>`; }
+        const done = (dr.items || []).filter(x => x.status !== null).length, total = (dr.items || []).length;
+        const pct = total ? Math.round(done * 100 / total) : 0;
+        const q = [d.truckNo, d.vehType, d.location].join(' ').toLowerCase().replace(/\s+/g, '');
+        html += `<div class="sv-row" data-q="${esc(q)}">
+          <div class="sv-main">
+            <div class="sv-top"><span class="sv-plate">${esc(d.truckNo || '—')}</span><span class="sv-res draft">Draft</span></div>
+            <div class="sv-type">${esc(d.vehType || '')}</div>
+            <div class="sv-meta">${done} of ${total} points marked · saved ${esc(svDay(dr.savedAt))}</div>
+            <div class="sv-prog"><div style="width:${pct}%"></div></div>
           </div>
-          <div id="${monthId}" style="display:none;padding-left:8px;margin-top:4px;">`;
-
-        Object.keys(groups[monthKey]).forEach((dayKey, di) => {
-          const dayId = monthId + '_day_' + di;
-          const recs = groups[monthKey][dayKey];
-          html += `<div style="margin-bottom:4px;">
-            <div onclick="toggleGroup('${dayId}')" style="display:flex;align-items:center;justify-content:space-between;background:rgba(224,123,0,0.06);border:1px solid rgba(224,123,0,0.2);border-radius:8px;padding:7px 12px;cursor:pointer;user-select:none;">
-              <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--accent);">📆 ${esc(dayKey)}</div>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span style="font-size:10px;color:var(--muted);">${recs.length} report${recs.length>1?'s':''}</span>
-                <span id="${dayId}_arrow" style="font-size:11px;color:var(--muted);">▼</span>
-              </div>
-            </div>
-            <div id="${dayId}" style="display:none;padding-left:6px;margin-top:3px;">`;
-
-          recs.forEach(rec => {
-            const storageKey = rec.id;
-            const t = rec.date ? new Date(rec.date).toLocaleTimeString('en-SA',{hour:'2-digit',minute:'2-digit'}) : '—';
-            const pass = rec.failCount === 0;
-            html += `<div class="saved-item" style="margin-bottom:6px;">
-              <div class="saved-item-top">
-                <div class="saved-veh">${esc(rec.vehType||'—')}</div>
-                <span class="saved-status-badge ${pass?'pass':'fail-s'}">${pass?'PASS':'FAIL'}</span>
-              </div>
-              <div class="saved-unit">${esc(rec.truckNo||'—')}</div>
-              <div class="saved-rid">${esc(rec.reportNum||'—')}</div>
-              <div class="saved-meta">🕐 ${esc(t)} &nbsp;|&nbsp; ${esc(rec.location||'—')}<br>Inspector: ${esc(rec.inspector||'—')}<br>${esc(rec.okCount)} OK &bull; ${esc(rec.failCount)} Issues &bull; ${esc(rec.total)} Points</div>
-              <div class="saved-actions">
-                <button class="saved-act-btn view drawer-action-btn" data-action="view-report" data-key="${esc(storageKey)}">View Report</button>
-                <button class="saved-act-btn del drawer-action-btn" data-action="delete-saved" data-key="${esc(storageKey)}">Delete</button>
-              </div>
-              <label class="combo-check-row"><input type="checkbox" class="combo-check" data-key="${esc(storageKey)}" ${comboSelection.has(storageKey) ? 'checked' : ''}> Include in combined report</label>
-            </div>`;
-          });
-
-          html += `</div></div>`;
-        });
-
-        html += `</div></div>`;
+          <div class="sv-acts">
+            <button class="sv-btn pri drawer-action-btn" data-action="resume-draft" data-id="${esc(dr.id)}">Resume</button>
+            <button class="sv-icon drawer-action-btn" data-action="delete-draft" data-id="${esc(dr.id)}" aria-label="Delete draft">&#128465;</button></div>
+        </div>`;
       });
     }
-
-    html += `</div></div>`;
     body.innerHTML = html;
-  } catch(e) { body.innerHTML = '<div class="drawer-empty">Could not load saved data.</div>'; }
+    if (keepQ) svFilter(keepQ);
+  } catch (e) { body.innerHTML = '<div class="sv-empty">Could not load saved data.</div>'; }
 }
 
 // ─── EVENT DELEGATION FOR DRAWER BUTTONS (Fix #3) ────────────────────────────
@@ -4976,7 +4911,6 @@ document.getElementById('savedDrawer').addEventListener('change', function(e) {
   if (cb.checked) comboSelection.add(cb.dataset.key); else comboSelection.delete(cb.dataset.key);
   const bar = document.getElementById('comboBar');
   const count = document.getElementById('comboCount');
-  if (bar) bar.classList.toggle('show', comboSelection.size > 0);
   if (count) count.textContent = comboSelection.size;
 });
 
@@ -4997,7 +4931,7 @@ async function generateComboReport() {
     } catch(e) { console.warn('Combined report: skipping', key, e); }
   }
   if (!recs.length) { showToast('Could not load the selected reports'); return; }
-  recs.sort((a,b) => new Date(a.date||0) - new Date(b.date||0));
+  recs.sort((a,b) => (new Date(a.date||0) - new Date(b.date||0)) || String(a.reportNum||'').localeCompare(String(b.reportNum||'')));
   buildComboReport(recs);
   document.getElementById('comboOverlay').classList.add('open');
   closeDrawer();
@@ -5005,72 +4939,45 @@ async function generateComboReport() {
 }
 
 function buildComboReport(recs) {
-  const now = new Date().toLocaleString('en-SA', { dateStyle: 'medium', timeStyle: 'short' });
-  const totalIssues = recs.reduce((a,r) => a + (r.failCount||0), 0);
-  const passed = recs.filter(r => (r.failCount||0) === 0).length;
-
-  // ── Executive summary table ──
-  let html = `
-    <div class="combo-title">COMPREHENSIVE FLEET INSPECTION REPORT</div>
-    <div class="combo-sub">HSE Department · Vehicle Safety &nbsp;·&nbsp; Generated ${esc(now)} &nbsp;·&nbsp; ${recs.length} vehicle(s)</div>
-    <div class="combo-stats">
-      <div class="combo-stat"><div class="n">${recs.length}</div><div class="l">Vehicles</div></div>
-      <div class="combo-stat"><div class="n ok">${passed}</div><div class="l">Passed</div></div>
-      <div class="combo-stat"><div class="n bad">${recs.length - passed}</div><div class="l">With Issues</div></div>
-      <div class="combo-stat"><div class="n bad">${totalIssues}</div><div class="l">Total Issues</div></div>
-    </div>
-    <div class="db-rpt-title" style="margin-bottom:6px;">Summary</div>
-    <table class="combo-table"><thead><tr>
-      <th>Unit</th><th>Type</th><th>Report No.</th><th>Date</th><th>Result</th><th>Issues</th>
-    </tr></thead><tbody>`;
-  recs.forEach(r => {
-    const d = r.date ? new Date(r.date).toLocaleDateString('en-SA', { dateStyle: 'medium' }) : '—';
-    const pass = (r.failCount||0) === 0;
-    html += `<tr>
-      <td>${esc(r.truckNo||'—')}</td><td>${esc(r.vehType||'—')}</td>
-      <td>${esc(r.reportNum||'—')}</td><td>${esc(d)}</td>
-      <td class="${pass?'combo-pass':'combo-fail'}">${pass?'PASS':'FAIL'}</td>
-      <td>${r.failCount||0}</td></tr>`;
+  // v46: combined report in the company document style.
+  const co = coGet(), C = co.color;
+  const th = (t, w) => `<th style="background:${C}${w ? ';width:' + w : ''}">${t}</th>`;
+  const h2 = t => `<h2 class="rd-h2" style="color:${C}">${t}</h2>`;
+  const day = d => { const x = new Date(d); return isNaN(x) ? '' : x.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); };
+  const fl = r => (r.items || []).filter(i => i.status === 'fail');
+  const resOf = r => { const f = fl(r); return !f.length ? ['Fit for use', '#1D7A3E'] : f.some(i => itemPriority(i) === 'High') ? ['Not fit for use', '#B00020'] : ['Fit with conditions', '#A15C00']; };
+  const dates = recs.map(r => new Date(r.date)).filter(d => !isNaN(d)).sort((a, b) => a - b);
+  const range = dates.length ? (day(dates[0]) === day(dates[dates.length - 1]) ? day(dates[0]) : day(dates[0]) + ' to ' + day(dates[dates.length - 1])) : '';
+  const counts = { fit: 0, cond: 0, not: 0 }; let issues = 0, high = 0;
+  recs.forEach(r => { const f = fl(r); issues += f.length; high += f.filter(i => itemPriority(i) === 'High').length;
+    const x = resOf(r)[0]; if (x === 'Fit for use') counts.fit++; else if (x === 'Not fit for use') counts.not++; else counts.cond++; });
+  const inspectors = [...new Set(recs.map(r => (r.inspData || {}).inspectorName || r.inspector).filter(x => x && x !== '—'))];
+  const sig = savedSignature();
+  const brand = co.logo ? `<img class="rd-logo" src="${co.logo}" alt="">` : (co.name ? `<div class="rd-coname" style="color:${C}">${esc(co.name)}</div>` : '');
+  let html = `<div class="rd-head" style="border-color:${C}">${brand}
+    <div class="rd-title"><div class="rd-t1">FLEET INSPECTION SUMMARY</div>${co.dept ? `<div class="rd-t2">${esc(co.dept)}</div>` : ''}</div>
+    <table class="rd-docbox"><tr><td class="rd-lab">Period</td><td><b>${esc(range)}</b></td></tr>
+    <tr><td class="rd-lab">Vehicles</td><td>${recs.length}</td></tr><tr><td class="rd-lab">Issued</td><td>${esc(day(new Date()))}</td></tr></table></div>`;
+  const box = (n, l, col) => `<div class="rd-box"><div class="rd-n"${col ? ` style="color:${col}"` : ''}>${n}</div><div class="rd-lab rd-up">${l}</div></div>`;
+  html += `<div class="rd-res">${box(recs.length, 'Vehicles')}${box(counts.fit, 'Fit for use', '#1D7A3E')}${box(counts.cond, 'With conditions', '#A15C00')}${box(counts.not, 'Not fit for use', '#B00020')}${box(issues, 'Issues' + (high ? ' (' + high + ' high)' : ''), issues ? '#B00020' : '')}</div>`;
+  html += h2('Summary') + `<table class="rd-t"><tr>${th('#', '5%')}${th('Report no.', '20%')}${th('Date', '13%')}${th('Plate', '12%')}${th('Vehicle type')}${th('Site', '12%')}${th('Issues', '8%')}${th('Result', '15%')}</tr>` +
+    recs.map((r, k) => { const x = resOf(r); return `<tr><td class="rd-c">${k + 1}</td><td>${esc(r.reportNum || '')}</td><td>${esc(day(r.date))}</td><td><b>${esc(r.truckNo || '')}</b></td><td>${esc(r.vehType || '')}</td><td>${esc(r.location && r.location !== '—' ? r.location : '')}</td><td class="rd-c">${fl(r).length}</td><td style="font-weight:800;color:${x[1]}">${x[0]}</td></tr>`; }).join('') + '</table>';
+  recs.forEach((r, k) => {
+    const d = r.inspData || {}, f = fl(r), x = resOf(r);
+    html += `<div class="rd-veh"><div class="rd-veh-h" style="border-color:${C}"><b>${k + 1}. ${esc(r.truckNo || '')}</b> · ${esc(r.vehType || '')}
+      <span style="color:${x[1]};font-weight:800;float:right">${x[0]}</span></div>
+      <div class="rd-veh-m">${esc(r.reportNum || '')} · ${esc(day(r.date))}${d.fsl ? ' · ' + esc(d.fsl) : ''}${d.driverName && d.driverName !== '—' ? ' · Driver ' + esc(d.driverName) : ''}${r.location && r.location !== '—' ? ' · ' + esc(r.location) : ''}</div>`;
+    if (!f.length) html += `<p class="rd-none">No issues. All ${(r.items || []).length} points satisfactory.</p>`;
+    else html += `<table class="rd-t"><tr>${th('#', '5%')}${th('Inspection point', '28%')}${th('Finding and action')}${th('Priority', '11%')}${th('Photo', '24%')}</tr>` +
+      f.map((it, n) => { const lines = String(it.note || '').split('\n').map(z => z.trim()).filter(Boolean); const p = itemPriority(it);
+        const ph = (it.photos || []).map(photoSrc).filter(Boolean);
+        return `<tr class="rd-keep"><td class="rd-c">${n + 1}</td><td><b>${esc(it.name)}</b><div class="rd-sub">${esc(it.section || '')}</div></td><td>${esc(lines[0] || 'Not compliant.')}${lines[1] ? `<div class="rd-act">${esc(lines.slice(1).join(' '))}</div>` : ''}</td><td class="rd-c" style="font-weight:800;color:${PRI_COL[p]}">${p}</td><td class="rd-thumbs">${ph.length ? '<div class="rd-tg">' + ph.map(sx => `<img src="${sx}" alt="">`).join('') + '</div>' : '<div class="rd-c">–</div>'}</td></tr>`; }).join('') + '</table>';
+    html += '</div>';
   });
-  html += `</tbody></table>`;
-
-  // ── Per-vehicle detail sections ──
-  recs.forEach((r, vi) => {
-    const d = r.date ? new Date(r.date).toLocaleString('en-SA', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-    const fails = (Array.isArray(r.items) ? r.items : []).filter(it => it.status === 'fail');
-    const idat = r.inspData || {};
-    html += `<div class="combo-veh">
-      <div class="combo-veh-head">
-        <div class="combo-veh-name">${vi+1}. ${esc(r.truckNo||'—')} — ${esc(r.vehType||'—')}</div>
-        <div class="combo-veh-rid">${esc(r.reportNum||'—')}</div>
-      </div>
-      <div class="combo-veh-meta">
-        Driver: ${esc(idat.driverName||'—')} &nbsp;·&nbsp; Inspector: ${esc(r.inspector||'—')} &nbsp;·&nbsp; ${esc(r.location||'—')} &nbsp;·&nbsp; ${esc(d)}
-        ${idat.odometer ? ` &nbsp;·&nbsp; Odo/Hr: ${esc(idat.odometer)}` : ''}
-        &nbsp;·&nbsp; ${r.okCount||0} OK / ${r.failCount||0} Issues / ${r.total||0} Points
-      </div>`;
-    if (!fails.length) {
-      html += `<div class="combo-cleared">&#10003; NO ISSUES — VEHICLE CLEARED</div>`;
-    } else {
-      fails.forEach((it, ii) => {
-        const photos = Array.isArray(it.photos) ? it.photos : [];
-        const cols = photos.length === 1 ? 'one' : photos.length === 2 ? 'two' : photos.length === 3 ? 'three' : photos.length > 3 ? 'many' : '';
-        const ph = photos.length
-          ? `<div class="photo-grid ${cols}" style="margin-top:6px;">${photos.map((s,pi)=>`<img src="${s}" alt="Photo ${pi+1} — ${esc(it.name)}" onerror="this.style.display='none'">`).join('')}</div>`
-          : '';
-        html += `<div class="combo-issue">
-          <div class="combo-issue-name">${ii+1}. ${esc(it.name)}</div>
-          <div class="combo-issue-sec">${esc(it.section||'')}</div>
-          ${it.note ? `<div class="combo-issue-note">${esc(it.note)}</div>` : ''}
-          ${ph}</div>`;
-      });
-    }
-    // Driver behavior (if it was observed for this inspection)
-    html += buildDriverBehaviorHtml(idat.driverBehavior, idat.driverName);
-    html += `</div>`;
-  });
-
-  document.getElementById('comboContent').innerHTML = html;
+  html += `<div class="rd-keep rd-signoff">${h2('Sign-off')}<table class="rd-t"><tr>${th('Role', '22%')}${th('Name')}${th('Signature', '34%')}${th('Date', '16%')}</tr>
+    <tr><td>Inspector</td><td>${esc(inspectors.join(', '))}</td><td class="rd-sigcell">${sig ? `<img src="${sig}" alt="Signature">` : ''}</td><td>${esc(day(new Date()))}</td></tr></table></div>
+    <div class="rd-foot"><span>${esc(co.name ? co.name + ' · ' : '')}Fleet inspection summary · ${recs.length} vehicles</span><span>${esc(range)}</span></div>`;
+  document.getElementById('comboContent').innerHTML = `<div class="rdoc rdoc-combo">${rdHeads(html)}</div>`;
 }
 
 function printComboReport() {
@@ -8022,6 +7929,9 @@ function coSet(patch) {
 }
 function savedSignature() { try { return localStorage.getItem(SIG_KEY) || ''; } catch (e) { return ''; } }
 
+// Table header rows as <thead>: printing then repeats them on the next page
+// and never leaves a header alone at the bottom of a page.
+function rdHeads(h) { return h.replace(/<table class="rd-t"><tr>(.*?)<\/tr>/g, '<table class="rd-t"><thead><tr>$1</tr></thead>'); }
 function isDocStyle(f) { return /^S[1-4]$/.test(String(f || '')); }
 
 // Priority: set by the inspector, otherwise read from the action wording.
@@ -8164,7 +8074,7 @@ function buildReportDoc(style) {
       h2('Findings and corrective actions') + findings('ref') + prevSectionHtml(C, th, h2) + photosBlock(3) + signoff;
   }
   const foot = `<div class="rd-foot"><span>${esc(co.name ? co.name + ' · ' : '')}${esc(co.title)} · ${esc(repNo)} · ${v(inspData.truckNo)}</span><span>${esc(rdDate())}</span></div>`;
-  return `<div class="rdoc rdoc-${style}">${body}${foot}</div>`;
+  return `<div class="rdoc rdoc-${style}">${rdHeads(body)}${foot}</div>`;
 }
 
 // ── Settings: company details and signature ─────────────────────────────
@@ -8685,8 +8595,8 @@ function forgetLearning() {
 <div id="comboOverlay">
   <div class="combo-inner">
     <div class="combo-toolbar">
-      <button class="combo-print-btn" onclick="printComboReport()">&#128424; PRINT / SAVE AS PDF</button>
-      <button class="combo-close-btn" onclick="closeComboReport()">&#10005; Close</button>
+      <button class="combo-print-btn" onclick="printComboReport()">Print or save as PDF</button>
+      <button class="combo-close-btn" onclick="closeComboReport()">Close</button>
     </div>
     <div id="comboContent"></div>
   </div>
