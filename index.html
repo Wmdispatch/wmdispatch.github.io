@@ -2224,7 +2224,7 @@ if ('serviceWorker' in navigator &&
 }
 
 // v45: version shown in Settings, and a manual "Check for updates".
-const APP_VERSION = '50';
+const APP_VERSION = '51';
 async function checkForUpdates() {
   const out = document.getElementById('updStat');
   const say = t => { if (out) out.textContent = t; };
@@ -8641,29 +8641,44 @@ function backOpenLayer() {
 }
 function backActiveScreen() { const s = document.querySelector('.screen.active'); return s ? s.id : 'screen-setup'; }
 function backAtRoot() { return !backOpenLayer() && backActiveScreen() === 'screen-setup'; }
-// One app entry is always kept on top, so every back press comes here first.
+// v51: Chrome (and the installed Android app) skips any history entry an app adds
+// without a real tap first, so back would jump straight out. The guard entry is
+// therefore added only during a tap, and never added again after a back press:
+// the app steps forward onto the same entry instead.
+//   base entry (app start)  <-  guard entry {ayn:1}  (we normally sit here)
+// Back moves to base -> popstate -> we handle it -> history.forward() to the guard.
+let _backExitAt = 0, _backFwd = false, _backExitTimer = null, _backHasGuard = false;
 function backSync() {
-  if (!(history.state && history.state.ayn)) { try { history.pushState({ ayn: 1 }, ''); } catch (e) {} }
+  if (history.state && history.state.ayn) return;
+  if (!(navigator.userActivation && navigator.userActivation.isActive)) return;   // only during a tap
+  if (_backHasGuard && !history.state) {
+    // On the base entry with the guard already ahead of us: step onto it.
+    _backFwd = true; history.forward(); return;
+  }
+  try { history.pushState({ ayn: 1 }, ''); _backHasGuard = true; } catch (e) {}
 }
-let _backExitAt = 0;
+function backReturn() { if (!_backHasGuard) return; _backFwd = true; history.forward(); }
 window.addEventListener('popstate', () => {
+  if (_backFwd) { _backFwd = false; if (history.state && history.state.ayn) return; }
+  if (history.state && history.state.ayn) return;            // arrived on the guard some other way
   const close = backOpenLayer();
-  if (close) close();
-  else if (backAtRoot()) {
-    // Home with nothing open: press back twice to close the app.
-    if (Date.now() - _backExitAt < 2200) { history.back(); return; }
+  if (close) { close(); backReturn(); return; }
+  if (backAtRoot()) {
+    // Home with nothing open: first press warns and stays on the base entry,
+    // so a second press within 2 seconds leaves the app.
     _backExitAt = Date.now();
     showToast('Press back again to close the app');
-  } else {
-    const scr = backActiveScreen();
-    if (scr === 'screen-format') showScreen('screen-checklist');
-    else if (scr === 'screen-report') newInspection();
-    else if (scr === 'screen-checklist') goBack();          // asks first if work would be lost
-    else if (scr !== 'screen-setup') showScreen('screen-setup');
+    clearTimeout(_backExitTimer);
+    _backExitTimer = setTimeout(() => { if (!history.state) backReturn(); }, 2200);
+    return;
   }
-  setTimeout(backSync, 0);                                    // still somewhere inside: keep the trap
+  const scr = backActiveScreen();
+  if (scr === 'screen-format') showScreen('screen-checklist');
+  else if (scr === 'screen-report') newInspection();
+  else if (scr === 'screen-checklist') goBack();          // asks first if work would be lost
+  else if (scr !== 'screen-setup') showScreen('screen-setup');
+  backReturn();
 });
-window.addEventListener('load', () => setTimeout(backSync, 0));
 // Any tap may open a panel or change screen; re-check after it.
 document.addEventListener('click', () => setTimeout(backSync, 0), true);
 (function backHookShowScreen() {

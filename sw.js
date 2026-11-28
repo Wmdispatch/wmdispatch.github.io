@@ -1,8 +1,8 @@
-/* Ayn Fleet: service worker (ships with app v50)
+/* Ayn Fleet: service worker (ships with app v51)
    Goal: after ONE successful visit the app works with no network at all —
    no reload, no spinner, no "you are offline" page. */
 
-const CACHE = 'fleet-inspect-shell-v20';
+const CACHE = 'fleet-inspect-shell-v21';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png',
