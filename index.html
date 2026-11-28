@@ -1294,6 +1294,28 @@
     html:has(body.combo-print), body.combo-print, body.combo-print #comboOverlay, body.combo-print .combo-inner { background:#fff !important; min-height:0 !important; height:auto !important; }
     body.combo-print .rdoc .rd-veh-h, body.combo-print .rdoc .rd-veh-m { break-after:avoid; page-break-after:avoid; }
   }
+
+  #lockScreen { position:fixed; inset:0; z-index:9999; background:var(--bg, #eef2f0); display:none; align-items:center; justify-content:center; }
+  #lockScreen.open { display:flex; }
+  body.locked > *:not(#lockScreen):not(#toast):not(script) { visibility:hidden; }
+  body.locked #toast { z-index:10000 !important; }
+  #lockScreen .lk-in { width:min(340px, 92vw); text-align:center; }
+  #lockScreen .lk-logo { width:72px; height:72px; border-radius:18px; box-shadow:0 6px 18px rgba(16,32,26,.15); }
+  #lockScreen .lk-title { font-size:21px; font-weight:800; margin-top:14px; color:#10201a; }
+  #lockScreen .lk-sub { font-size:14px; font-weight:500; color:#4a5a53; margin-top:4px; min-height:40px; }
+  #lockScreen .lk-dots { display:flex; justify-content:center; gap:12px; margin:14px 0 18px; }
+  #lockScreen .lk-dots span { width:14px; height:14px; border-radius:50%; border:2px solid #0f6e56; }
+  #lockScreen .lk-dots span.on { background:#0f6e56; }
+  #lockScreen .lk-dots.shake { animation:lkShake .35s; }
+  @keyframes lkShake { 25% { transform:translateX(-8px); } 75% { transform:translateX(8px); } }
+  #lockScreen .lk-pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+  #lockScreen .lk-pad button { height:62px; border-radius:16px; border:1px solid #d6e1dc; background:#fff; font:inherit; font-size:24px; font-weight:700; color:#10201a; cursor:pointer; }
+  #lockScreen .lk-pad button:active { background:#e3f4ec; }
+  #lockScreen .lk-pad .lk-bio { color:#0f6e56; display:flex; align-items:center; justify-content:center; }
+  #lockScreen .lk-row { display:flex; justify-content:space-between; margin-top:14px; }
+  #lockScreen .lk-link { background:none; border:none; font:inherit; font-size:15px; font-weight:700; color:#0f6e56; padding:10px; cursor:pointer; }
+  #lockScreen .lk-link.danger { color:#B00020; }
+  @media print { #lockScreen { display:none !important; } }
 </style>
 
 </head>
@@ -1559,6 +1581,18 @@
       </div>
     </div>
     <div class="sheet-pane on" id="spane-prefs">
+      <div class="sheet-sec">
+        <h4>App lock</h4>
+        <div class="st-head" style="margin-bottom:2px;"><div class="toggle-label-text">Fingerprint and PIN</div><span class="st-chip" id="lockChip">Off</span></div>
+        <div class="toggle-sub-text" id="lockStat"></div>
+        <div class="st-actions">
+          <button class="st-btn pri" id="lockOnBtn" onclick="lockTurnOn()">Turn on app lock</button>
+          <button class="st-btn" id="lockNowBtn" onclick="closeSettings(); lockNow()" style="display:none;">Lock now</button>
+          <button class="st-btn" id="lockBioBtn" onclick="lockToggleBio()" style="display:none;">Use fingerprint</button>
+        </div>
+        <button class="st-link danger" id="lockOffBtn" onclick="lockTurnOff()" style="display:none;">Turn off app lock</button>
+      </div>
+
       <div class="sheet-sec">
         <h4>Display</h4>
         <div class="toggle-row-ui" style="margin-bottom:14px;">
@@ -2185,7 +2219,7 @@ if ('serviceWorker' in navigator &&
 }
 
 // v45: version shown in Settings, and a manual "Check for updates".
-const APP_VERSION = '47';
+const APP_VERSION = '48';
 async function checkForUpdates() {
   const out = document.getElementById('updStat');
   const say = t => { if (out) out.textContent = t; };
@@ -5295,6 +5329,7 @@ function renderAppSettings() {
   document.querySelectorAll('#noteLinesSeg .seg-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.val, 10) === issueNoteLines));
   const nl = document.getElementById('noteLinesSeg'); if (nl) nl.style.opacity = autoIssueNotes ? '1' : '.45';
   if (typeof renderLearnStat === 'function') renderLearnStat();
+  if (typeof renderLockSettings === 'function') renderLockSettings();
   const ms = document.getElementById('noteMemStat');
   if (ms) { const c = Object.keys(noteMemory).length; ms.textContent = c ? 'Learned your wording for ' + c + ' note' + (c > 1 ? 's' : '') + '.' : 'The app learns your wording when you edit a note.'; }
   renderMasterStat();
@@ -7902,7 +7937,7 @@ function coSet(patch) {
   catch (e) { showToast('Could not save: the logo may be too large'); return false; }
   return true;
 }
-function savedSignature() { try { return localStorage.getItem(SIG_KEY) || ''; } catch (e) { return ''; } }
+function savedSignature() { return typeof getSecret === 'function' ? getSecret('sig') : (localStorage.getItem(SIG_KEY) || ''); }
 
 // Table header rows as <thead>: printing then repeats them on the next page
 // and never leaves a header alone at the bottom of a page.
@@ -8115,7 +8150,7 @@ function initSigPad() {
   c.addEventListener('touchstart', down, { passive: false }); c.addEventListener('touchmove', move, { passive: false }); c.addEventListener('touchend', up);
 }
 function clearSigPad() { const c = document.getElementById('sigPad'); if (c && _padCtx) _padCtx.clearRect(0, 0, c.width, c.height); _padInk = false; }
-function saveSigPad() {
+async function saveSigPad() {
   const c = document.getElementById('sigPad');
   if (!c || !_padInk) { showToast('Draw your signature in the box first'); return; }
   // Trim the empty space around the ink so it sits well in the sign-off box.
@@ -8125,7 +8160,7 @@ function saveSigPad() {
   const pad = 6, w = Math.min(c.width, x1 - x0 + pad * 2), h = Math.min(c.height, y1 - y0 + pad * 2);
   const o = document.createElement('canvas'); o.width = w; o.height = h;
   o.getContext('2d').drawImage(c, Math.max(0, x0 - pad), Math.max(0, y0 - pad), w, h, 0, 0, w, h);
-  try { localStorage.setItem(SIG_KEY, o.toDataURL('image/png')); } catch (e) { showToast('Could not save the signature'); return; }
+  try { await setSecret('sig', o.toDataURL('image/png')); } catch (e) { showToast('Could not save the signature: ' + (e.message || e)); return; }
   clearSigPad(); renderCompanySettings(); refreshOpenReport();
   showToast('Signature saved on this phone. It goes on every report.');
 }
@@ -8156,9 +8191,9 @@ async function startFresh() {
   showToast('Deleted ' + n + ' reports and drafts. Next report starts at 0001.');
 }
 
-function removeSignature() {
+async function removeSignature() {
   if (!confirm('Remove your saved signature from this phone?\n\nReports already saved keep their signature.')) return;
-  try { localStorage.removeItem(SIG_KEY); } catch (e) {}
+  try { await setSecret('sig', ''); } catch (e) {}
   renderCompanySettings();
 }
 
@@ -8185,7 +8220,7 @@ function srvParse(code) {
     return { url: raw.slice(0, i), key: raw.slice(i + 1) };
   } catch (e) { return null; }
 }
-function srvConn() { try { return srvParse(localStorage.getItem(SRV_CODE)); } catch (e) { return null; } }
+function srvConn() { try { return srvParse(typeof getSecret === 'function' ? getSecret('srv') : localStorage.getItem(SRV_CODE)); } catch (e) { return null; } }
 function srvJson(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
 function srvSave(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
@@ -8316,7 +8351,7 @@ async function srvConnect() {
     const r = await srvCall(conn, { action: 'ping' });
     if (r.role !== 'phone') { showToast('That is the ' + r.role + ' code. Use the PHONE code here.'); return; }
   } catch (e) { showToast('Could not reach the server: ' + (e.message || e)); return; }
-  localStorage.setItem(SRV_CODE, code);
+  await setSecret('srv', code);
   if (inp) inp.value = '';
   // Send every finished report already on this phone.
   const list = await window.storage.list('insp:');
@@ -8371,7 +8406,8 @@ async function srvRestore() {
 
 function srvDisconnect() {
   if (!confirm('Stop sending reports to the dashboard from this phone?\n\nReports already on the dashboard stay there.')) return;
-  [SRV_CODE, SRV_QUEUE, SRV_STATE].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  [SRV_QUEUE, SRV_STATE].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  try { setSecret('srv', ''); } catch (e) {}
   srvRender();
 }
 
@@ -8621,6 +8657,253 @@ document.addEventListener('click', () => setTimeout(backSync, 0), true);
   window.showScreen = function (id) { const r = orig.apply(this, arguments); setTimeout(backSync, 0); return r; };
   window.showScreen.__back = true;
 })();
+
+
+// ════════════════════════════════════════════════════════════════════════
+// v48 — APP LOCK (fingerprint, PIN as backup) AND ENCRYPTED SECRETS
+// ════════════════════════════════════════════════════════════════════════
+// With the lock on, the signature and the server code are kept only in an
+// encrypted vault (AES-GCM). The vault key is wrapped twice:
+//   • with a key made from the PIN (PBKDF2, 210 000 rounds) — full protection
+//   • with a device key that cannot be read out of the browser, released
+//     after a fingerprint check — convenience
+// Reports stay as they are. The app locks at start and after 5 minutes away.
+const LOCK_CFG = 'aynLock';
+const LOCK_VAULT = 'aynVault';
+const LOCK_AWAY_MS = 5 * 60 * 1000;
+const SECRET_PLAIN = { sig: 'aynSignature', srv: 'aynServerCode' };
+let vaultMem = null;               // decrypted secrets while unlocked
+let _vaultKey = null;              // CryptoKey while unlocked
+let _hiddenAt = 0, _pinBuf = '', _pinMode = 'unlock', _pinFirst = '', _pinFails = 0, _pinWaitUntil = 0;
+
+const b64e = b => btoa(String.fromCharCode(...new Uint8Array(b)));
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+function lockCfg() { try { return JSON.parse(localStorage.getItem(LOCK_CFG)) || null; } catch (e) { return null; } }
+function lockOn() { const c = lockCfg(); return !!(c && c.on); }
+
+// ── secrets: every read and write of the signature and server code goes here
+function getSecret(name) {
+  if (lockOn()) return (vaultMem && vaultMem[name]) || '';
+  try { return localStorage.getItem(SECRET_PLAIN[name]) || ''; } catch (e) { return ''; }
+}
+async function setSecret(name, value) {
+  if (lockOn()) {
+    if (!vaultMem) throw new Error('App is locked');
+    if (value) vaultMem[name] = value; else delete vaultMem[name];
+    await saveVault();
+  } else {
+    try { if (value) localStorage.setItem(SECRET_PLAIN[name], value); else localStorage.removeItem(SECRET_PLAIN[name]); } catch (e) {}
+  }
+}
+
+// ── small key store in IndexedDB (CryptoKey objects can be stored, not read)
+function keyDb() {
+  return new Promise((res, rej) => { const r = indexedDB.open('ayn-keys', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('k'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+async function keyPut(id, v) { const db = await keyDb(); return new Promise((res, rej) => { const t = db.transaction('k', 'readwrite'); t.objectStore('k').put(v, id); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function keyGet(id) { const db = await keyDb(); return new Promise((res, rej) => { const r = db.transaction('k').objectStore('k').get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function keyDel(id) { const db = await keyDb(); return new Promise(res => { const t = db.transaction('k', 'readwrite'); t.objectStore('k').delete(id); t.oncomplete = res; t.onerror = res; }); }
+
+async function pinKey(pin, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['wrapKey', 'unwrapKey']);
+}
+async function wrapWith(wrapper, key) { const iv = crypto.getRandomValues(new Uint8Array(12)); const d = await crypto.subtle.wrapKey('raw', key, wrapper, { name: 'AES-GCM', iv }); return { iv: b64e(iv), data: b64e(d) }; }
+async function unwrapWith(wrapper, w) {
+  return crypto.subtle.unwrapKey('raw', b64d(w.data), wrapper, { name: 'AES-GCM', iv: b64d(w.iv) }, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+async function saveVault() {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const d = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, _vaultKey, new TextEncoder().encode(JSON.stringify(vaultMem || {})));
+  localStorage.setItem(LOCK_VAULT, JSON.stringify({ iv: b64e(iv), data: b64e(d) }));
+}
+async function openVault(key) {
+  const v = JSON.parse(localStorage.getItem(LOCK_VAULT) || 'null');
+  if (!v) return {};
+  const d = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(v.iv) }, key, b64d(v.data));
+  return JSON.parse(new TextDecoder().decode(d));
+}
+
+// ── turning the lock on and off
+async function lockEnable(pin) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iter = 210000;
+  const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  const wrapPin = await wrapWith(await pinKey(pin, salt, iter), key);
+  vaultMem = {}; Object.keys(SECRET_PLAIN).forEach(n => { const v = localStorage.getItem(SECRET_PLAIN[n]); if (v) vaultMem[n] = v; });
+  _vaultKey = key;
+  localStorage.setItem(LOCK_CFG, JSON.stringify({ on: true, salt: b64e(salt), iter, wrapPin, cred: null, wrapDev: null }));
+  await saveVault();
+  Object.values(SECRET_PLAIN).forEach(k => localStorage.removeItem(k));   // plain copies gone
+}
+async function lockDisable() {
+  if (!vaultMem) throw new Error('Unlock first');
+  Object.keys(SECRET_PLAIN).forEach(n => { if (vaultMem[n]) localStorage.setItem(SECRET_PLAIN[n], vaultMem[n]); });
+  localStorage.removeItem(LOCK_CFG); localStorage.removeItem(LOCK_VAULT);
+  await keyDel('dev');
+  vaultMem = null; _vaultKey = null;
+}
+
+// ── fingerprint (WebAuthn platform authenticator, checked on this phone)
+function bioSupported() { return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext); }
+async function bioAvailable() { try { return bioSupported() && await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); } catch (e) { return false; } }
+async function bioEnroll() {
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'Ayn Fleet' },
+    user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'inspector', displayName: (localStorage.getItem('savedInspectorName') || 'Inspector') },
+    pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000 } });
+  const dev = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['wrapKey', 'unwrapKey']);
+  await keyPut('dev', dev);
+  const c = lockCfg(); c.cred = b64e(cred.rawId); c.wrapDev = await wrapWith(dev, _vaultKey);
+  localStorage.setItem(LOCK_CFG, JSON.stringify(c));
+}
+async function bioCheck() {
+  const c = lockCfg(); if (!c || !c.cred) return false;
+  await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)),
+    allowCredentials: [{ type: 'public-key', id: b64d(c.cred), transports: ['internal'] }], userVerification: 'required', timeout: 60000 } });
+  return true;
+}
+async function bioOff() { const c = lockCfg(); c.cred = null; c.wrapDev = null; localStorage.setItem(LOCK_CFG, JSON.stringify(c)); await keyDel('dev'); }
+
+// ── lock screen
+function lockShow(mode) {
+  _pinMode = mode || 'unlock'; _pinBuf = ''; _pinFirst = '';
+  let el = document.getElementById('lockScreen');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'lockScreen'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
+    el.innerHTML = `<div class="lk-in">
+      <img class="lk-logo" src="${typeof AYN_ICON_192 !== 'undefined' ? AYN_ICON_192 : ''}" alt="">
+      <div class="lk-title" id="lkTitle"></div><div class="lk-sub" id="lkSub"></div>
+      <div class="lk-dots" id="lkDots" aria-live="polite"></div>
+      <div class="lk-pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button onclick="lockPress('${n}')">${n}</button>`).join('')}
+        <button class="lk-bio" id="lkBio" onclick="lockBio()" aria-label="Use fingerprint"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 11v3a6 6 0 0 1-1.5 4"/><path d="M8.5 7.5A5 5 0 0 1 17 11v2.5"/><path d="M6.6 9.6A5.5 5.5 0 0 0 6.5 11v2a9 9 0 0 1-1 4"/><path d="M9.2 11a2.8 2.8 0 0 1 5.6 0v2.5a10 10 0 0 1-1.6 5.5"/><path d="M17 16.5a14 14 0 0 1-1 3"/><path d="M5 5.6A8.5 8.5 0 0 1 19.6 8"/><path d="M20.4 11v1.5"/></svg></button>
+        <button onclick="lockPress('0')">0</button>
+        <button onclick="lockPress('del')" aria-label="Delete">&#9003;</button></div>
+      <div class="lk-row"><button class="lk-link" id="lkOk" onclick="lockPress('ok')">Unlock</button>
+        <button class="lk-link" id="lkCancel" onclick="lockCancel()">Cancel</button>
+        <button class="lk-link danger" id="lkForgot" onclick="lockForgot()">Forgot PIN</button></div></div>`;
+    document.body.appendChild(el);
+  }
+  el.classList.add('open');
+  document.body.classList.add('locked');
+  lockPaint();
+  if (_pinMode === 'unlock' && (lockCfg() || {}).cred) setTimeout(lockBio, 250);
+}
+function lockPaint() {
+  const t = { unlock: ['Ayn Fleet is locked', 'Use your fingerprint or enter your PIN'],
+              set1: ['Choose a PIN', '4 to 6 digits. You will need it if fingerprint does not work.'],
+              set2: ['Enter the PIN again', 'To make sure it is right'],
+              verify: ['Enter your PIN', 'To change app lock settings'] }[_pinMode];
+  document.getElementById('lkTitle').textContent = t[0];
+  const wait = _pinWaitUntil - Date.now();
+  document.getElementById('lkSub').textContent = wait > 0 ? 'Too many wrong tries. Wait ' + Math.ceil(wait / 1000) + ' seconds.' : t[1];
+  document.getElementById('lkDots').innerHTML = Array.from({ length: Math.max(4, _pinBuf.length) }, (_, i) => `<span class="${i < _pinBuf.length ? 'on' : ''}"></span>`).join('');
+  const c = lockCfg() || {};
+  document.getElementById('lkBio').style.visibility = (_pinMode === 'unlock' && c.cred) ? 'visible' : 'hidden';
+  document.getElementById('lkCancel').style.display = _pinMode === 'unlock' ? 'none' : '';
+  document.getElementById('lkForgot').style.display = _pinMode === 'unlock' ? '' : 'none';
+  document.getElementById('lkOk').textContent = (_pinMode === 'set1' || _pinMode === 'set2') ? 'Next' : (_pinMode === 'verify' ? 'Confirm' : 'Unlock');
+}
+function lockHide() {
+  const el = document.getElementById('lockScreen'); if (el) el.classList.remove('open');
+  document.body.classList.remove('locked');
+}
+function lockCancel() { lockHide(); _pinMode = 'unlock'; }
+async function lockPress(k) {
+  if (_pinWaitUntil > Date.now()) { lockPaint(); return; }
+  if (k === 'del') _pinBuf = _pinBuf.slice(0, -1);
+  else if (k !== 'ok' && _pinBuf.length < 6) _pinBuf += k;
+  lockPaint();
+  const done = k === 'ok' || _pinBuf.length === 6;
+  if (!done || _pinBuf.length < 4) { if (k === 'ok') showToast('The PIN has 4 to 6 digits'); return; }
+  const pin = _pinBuf; _pinBuf = '';
+  if (_pinMode === 'set1') { _pinFirst = pin; _pinMode = 'set2'; lockPaint(); return; }
+  if (_pinMode === 'set2') {
+    if (pin !== _pinFirst) { _pinMode = 'set1'; showToast('The two PINs did not match. Try again.'); lockPaint(); return; }
+    await lockEnable(pin); lockHide(); lockMarkActive(); renderLockSettings();
+    showToast('App lock is on');
+    if (await bioAvailable() && confirm('Also unlock with your fingerprint?')) {
+      try { await bioEnroll(); showToast('Fingerprint unlock is on'); } catch (e) { showToast('Fingerprint not set: ' + (e.message || e.name)); }
+    }
+    renderLockSettings(); return;
+  }
+  // unlock or verify: try the PIN
+  try {
+    const c = lockCfg();
+    const key = await unwrapWith(await pinKey(pin, b64d(c.salt), c.iter), c.wrapPin);
+    vaultMem = await openVault(key); _vaultKey = key; _pinFails = 0;
+    const was = _pinMode; lockHide(); lockMarkActive(); lockAfterUnlock(was);
+  } catch (e) {
+    _pinFails++;
+    if (_pinFails >= 5) _pinWaitUntil = Date.now() + Math.min(300, 30 * Math.pow(2, _pinFails - 5)) * 1000;
+    const dots = document.getElementById('lkDots'); if (dots) { dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake'); }
+    showToast('Wrong PIN'); lockPaint();
+  }
+}
+async function lockBio() {
+  try {
+    if (!(await bioCheck())) return;
+    const c = lockCfg(), dev = await keyGet('dev');
+    if (!dev || !c.wrapDev) throw new Error('Fingerprint key missing, use the PIN');
+    const key = await unwrapWith(dev, c.wrapDev);
+    vaultMem = await openVault(key); _vaultKey = key;
+    lockHide(); lockMarkActive(); lockAfterUnlock('unlock');
+  } catch (e) { if (e && e.name !== 'NotAllowedError') showToast(e.message || 'Fingerprint did not work, use the PIN'); }
+}
+let _lockAfter = null;
+function lockAfterUnlock(mode) {
+  if (typeof renderUnitCard === 'function') renderUnitCard();
+  if (typeof srvRender === 'function') { srvRender(); if (typeof srvSync === 'function') srvSync(false); }
+  if (typeof renderCompanySettings === 'function') renderCompanySettings();
+  if (mode === 'verify' && _lockAfter) { const f = _lockAfter; _lockAfter = null; f(); }
+}
+async function lockForgot() {
+  if (!confirm('Reset app lock?\n\nYour reports stay. Your saved signature and the dashboard code are erased: draw the signature again and paste the PHONE code again.')) return;
+  localStorage.removeItem(LOCK_CFG); localStorage.removeItem(LOCK_VAULT); await keyDel('dev');
+  vaultMem = null; _vaultKey = null; lockHide(); renderLockSettings();
+  showToast('App lock removed. Set your signature and dashboard code again.');
+}
+function lockMarkActive() { _hiddenAt = 0; }
+function lockNow() { if (!lockOn()) return; vaultMem = null; _vaultKey = null; lockShow('unlock'); }
+
+// Lock at start, and after 5 minutes in the background.
+document.addEventListener('visibilitychange', () => {
+  if (!lockOn()) return;
+  if (document.hidden) _hiddenAt = Date.now();
+  else if (_hiddenAt && Date.now() - _hiddenAt > LOCK_AWAY_MS) lockNow();
+});
+if (lockOn()) lockShow('unlock');
+
+// ── Settings
+function renderLockSettings() {
+  const on = lockOn(), c = lockCfg() || {};
+  const st = document.getElementById('lockStat'); if (!st) return;
+  st.textContent = on ? ((c.cred ? 'Fingerprint and PIN.' : 'PIN only.') + ' Locks when the app opens and after 5 minutes away.')
+                      : 'Protect your signature and dashboard code with a PIN and fingerprint.';
+  const chip = document.getElementById('lockChip'); if (chip) { chip.textContent = on ? 'On' : 'Off'; chip.classList.toggle('on', on); }
+  const show = (id, v) => { const e = document.getElementById(id); if (e) e.style.display = v ? '' : 'none'; };
+  show('lockOnBtn', !on); show('lockNowBtn', on); show('lockOffBtn', on); show('lockBioBtn', on);
+  const bb = document.getElementById('lockBioBtn'); if (bb) bb.textContent = c.cred ? 'Turn off fingerprint' : 'Use fingerprint';
+}
+function lockTurnOn() { lockShow('set1'); }
+function lockVerifyThen(f) { _lockAfter = f; lockShow('verify'); }
+function lockTurnOff() {
+  lockVerifyThen(async () => {
+    if (!confirm('Turn off app lock?\n\nYour signature and dashboard code will be stored without encryption.')) return;
+    await lockDisable(); renderLockSettings(); showToast('App lock is off');
+  });
+}
+function lockToggleBio() {
+  const c = lockCfg() || {};
+  lockVerifyThen(async () => {
+    try {
+      if (c.cred) { await bioOff(); showToast('Fingerprint unlock is off'); }
+      else { if (!(await bioAvailable())) { showToast('This phone has no fingerprint or face unlock set up'); return; } await bioEnroll(); showToast('Fingerprint unlock is on'); }
+    } catch (e) { showToast('Fingerprint not changed: ' + (e.message || e.name)); }
+    renderLockSettings();
+  });
+}
 
 </script>
 
