@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.wmdispatch.aynfleet",
+        "sha256_cert_fingerprints": ["6E:3D:CD:A3:38:21:11:28:0D:83:1E:73:3A:D9:C2:B1:BE:B7:43:F7:32:9C:FF:BA:C5:F2:00:CE:5F:BD:64:FB"]
+      }
+    }]
