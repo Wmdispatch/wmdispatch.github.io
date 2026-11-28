@@ -1466,7 +1466,7 @@
           <div class="btn-row"><label class="btn-secondary" for="coLogoFile" style="text-align:center;cursor:pointer;">Choose logo picture</label>
           <button class="btn-secondary danger-btn" id="coLogoRm" onclick="removeCompanyLogo()">Remove logo</button></div>
           <input type="file" id="coLogoFile" accept="image/*" style="display:none;" onchange="loadCompanyLogo(this)"></div>
-        <div class="co-field"><label for="coCode">Report number code</label><input type="text" id="coCode" maxlength="8" placeholder="FACE" autocapitalize="characters" onchange="saveCompanyField('code', this.value)">
+        <div class="co-field"><label for="coCode">Report number code</label><input type="text" id="coCode" maxlength="8" placeholder="ABC" autocapitalize="characters" onchange="saveCompanyField('code', this.value)">
           <div class="toggle-sub-text" style="margin-top:4px;">Next numbers: <b id="coNumPrev"></b></div></div>
         <div class="co-field"><label for="coTitle">Report title</label><input type="text" id="coTitle" onchange="saveCompanyField('title', this.value)"></div>
         <div class="co-field"><label for="coDept">Department line</label><input type="text" id="coDept" onchange="saveCompanyField('dept', this.value)"></div>
@@ -4068,9 +4068,9 @@ function getDeviceTag() {
   }
   return tag;
 }
-// v44: FACE-HV-2026-0001. Company code (Settings) + vehicle group + the year
+// v44: ABC-HV-2026-0001. Company code (Settings) + vehicle group + the year
 // of the inspection + a count per group per year. Each January the count
-// starts again at 0001 (FACE-HV-2027-0001) by itself.
+// starts again at 0001 (ABC-HV-2027-0001) by itself.
 function reportCode() {
   const c = (typeof coGet === 'function') ? coGet() : {};
   return String(c.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
