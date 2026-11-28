@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # to publish each app version's files as a GitHub release for in-app updates
 
 concurrency:
   group: android-apk
@@ -48,6 +48,22 @@ jobs:
 
       - name: Copy the app files into www/
         run: npm run build
+
+      # In-app updates: installed Android apps read version.json on the website and
+      # download this zip. index.html sits at the root of the zip.
+      - name: Publish this version for in-app updates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(node -p "require('./version.json').version")
+          (cd www && zip -q -r -X ../www.zip .)
+          unzip -l www.zip | head -12
+          if gh release view "web-v$V" >/dev/null 2>&1; then
+            gh release upload "web-v$V" www.zip --clobber
+          else
+            gh release create "web-v$V" www.zip --title "Ayn Fleet app files v$V" \
+              --notes "Files for the in-app update of the Android app to v$V." --latest=false
+          fi
 
       - name: Create the Android project
         run: |

@@ -1989,6 +1989,12 @@
 
 <!-- three.js r128 (MIT), embedded so the 3D vehicle works offline -->
 <script>
+/* v54: inside the Android app, confirm at once that this version of the app
+   opened, or the in-app updater rolls back to the last good one. */
+(function () { try { if (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform())
+  Capacitor.nativePromise('CapacitorUpdater', 'notifyAppReady', {}).catch(function () {}); } catch (e) {} })();
+</script>
+<script>
 /**
  * @license
  * Copyright 2010-2021 Three.js Authors
@@ -2231,10 +2237,52 @@ if ('serviceWorker' in navigator &&
 }
 
 // v45: version shown in Settings, and a manual "Check for updates".
-const APP_VERSION = '53';
+const APP_VERSION = '54';
+// ════════════════════════════════════════════════════════════════════════
+// v54 — UPDATES INSIDE THE ANDROID APP (Capacitor + capacitor-updater)
+// ════════════════════════════════════════════════════════════════════════
+// The Android app carries its own copy of these files. When a newer version is
+// published, the app downloads it in the background (version.json on the
+// website says which, the files come as a zip from the GitHub release) and
+// offers "Update now". Reports stay: the app's storage does not change.
+const IS_NATIVE = !!(window.Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform());
+const UPDATE_INFO_URL = 'https://wmdispatch.github.io/version.json';
+const nu = (m, o) => Capacitor.nativePromise('CapacitorUpdater', m, o || {});
+let _nuBusy = false, _nuLast = 0, _nuReady = null;
+async function nativeCheckUpdate(say) {
+  say = say || (() => {});
+  if (_nuReady) { showUpdateBanner(_nuReady); say('An update is ready. Tap Update now at the bottom.'); return; }
+  if (_nuBusy) { say('Checking…'); return; }
+  if (!navigator.onLine) { say('No internet. Connect and check again.'); return; }
+  _nuBusy = true; _nuLast = Date.now(); say('Checking…');
+  try {
+    const r = await fetch(UPDATE_INFO_URL + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('update info not found (' + r.status + ')');
+    const v = await r.json();
+    if (!(+v.version > +APP_VERSION)) { say('You have the latest version (v' + APP_VERSION + ').'); return; }
+    say('Downloading v' + v.version + '…');
+    const list = await nu('list').catch(() => ({ bundles: [] }));
+    let b = (list.bundles || []).find(x => x.version === String(v.version) && x.status !== 'error');
+    if (!b) b = await nu('download', { url: v.url, version: String(v.version) });
+    await nu('next', { id: b.id }).catch(() => {});            // used at the next start even if not tapped
+    _nuReady = () => nu('set', { id: b.id });                  // reloads into the new version
+    showUpdateBanner(_nuReady);
+    say('Version ' + v.version + ' is ready. Tap Update now at the bottom.');
+  } catch (e) {
+    say('Could not update now: ' + (e.message || e) + '. It will try again later.');
+  } finally { _nuBusy = false; }
+}
+if (IS_NATIVE) {
+  window.addEventListener('load', () => setTimeout(() => nativeCheckUpdate(), 4000));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && Date.now() - _nuLast > 30 * 60 * 1000) nativeCheckUpdate();
+  });
+}
+
 async function checkForUpdates() {
   const out = document.getElementById('updStat');
   const say = t => { if (out) out.textContent = t; };
+  if (IS_NATIVE) return nativeCheckUpdate(say);
   if (!('serviceWorker' in navigator) || location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
     say('Updates work in the installed app.'); return;
   }
@@ -2269,6 +2317,7 @@ function showUpdateBanner(worker) {
     btn.onclick = () => {
       btn.disabled = true; btn.textContent = 'Updating\u2026';
       _updateRequested = true;
+      if (typeof worker === 'function') { worker(); return; }      // v54: Android app update
       try { worker.postMessage({ type: 'SKIP_WAITING' }); } catch (e) {}
       setTimeout(() => location.reload(), 1500);
     };
