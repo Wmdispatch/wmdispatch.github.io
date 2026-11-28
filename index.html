@@ -2185,7 +2185,7 @@ if ('serviceWorker' in navigator &&
 }
 
 // v45: version shown in Settings, and a manual "Check for updates".
-const APP_VERSION = '46';
+const APP_VERSION = '47';
 async function checkForUpdates() {
   const out = document.getElementById('updStat');
   const say = t => { if (out) out.textContent = t; };
@@ -7531,32 +7531,7 @@ function pbOpenCamera() {
 }
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ─── BACK BUTTON / EXIT CONFIRMATION ──────────────────────────────────────────
-// The device / browser Back button first closes any open overlay. When nothing
-// is open it asks the user to confirm before leaving the app.
-(function setupBackGuard() {
-  function pushGuard() { try { history.pushState({ fleetGuard: true }, ''); } catch (e) {} }
-  window.addEventListener('load', pushGuard);
-  window.addEventListener('popstate', function () {
-    const pbPicker = document.getElementById('pbPickerOverlay');
-    const pbModal  = document.getElementById('photoBankModal');
-    const cam      = document.getElementById('inappCamOverlay');
-    const drawer   = document.getElementById('savedDrawer');
-    // 1. If an overlay is open, Back just closes it
-    const combo    = document.getElementById('comboOverlay');
-    if (combo && combo.classList.contains('open'))       { closeComboReport(); pushGuard(); return; }
-    if (pbPicker && pbPicker.classList.contains('open')) { closePbPicker(); pushGuard(); return; }
-    if (pbModal  && pbModal.classList.contains('open'))  { closePhotoBank(); pushGuard(); return; }
-    if (cam      && cam.classList.contains('open'))      { closeInappCam();  pushGuard(); return; }
-    if (drawer   && drawer.classList.contains('open'))   { closeDrawer();    pushGuard(); return; }
-    // 2. Otherwise confirm exit
-    if (confirm('Do you want to exit the app?')) {
-      history.back();           // let the browser actually leave / close
-    } else {
-      pushGuard();              // stay in the app
-    }
-  });
-})();
+// Back button: see v47 ANDROID BACK BUTTON (the older guard was replaced).
 
 
 // ════════════════════════════════════════════════════════════════════════
@@ -8588,6 +8563,64 @@ function forgetLearning() {
   renderLearnStat(); if (typeof renderAppSettings === 'function') renderAppSettings();
   showToast('Learning cleared');
 }
+
+
+// ════════════════════════════════════════════════════════════════════════
+// v47 — ANDROID BACK BUTTON
+// ════════════════════════════════════════════════════════════════════════
+// The app is one page, so Android's back would leave it. One history entry is
+// kept while anything is open or a screen other than home is showing; back
+// closes the top panel or steps back one screen. At home with nothing open,
+// back leaves the app as usual.
+const BACK_LAYERS = [
+  ['inappCamOverlay', () => closeInappCam()],
+  ['pbPickerOverlay', () => { if (typeof closePbPicker === 'function') closePbPicker(); else document.getElementById('pbPickerOverlay').classList.remove('open'); }],
+  ['photoBankModal',  () => closePhotoBank()],
+  ['comboOverlay',    () => closeComboReport()],
+  ['settingsSheet',   () => closeSettings()],
+  ['savedDrawer',     () => closeDrawer()],
+  ['modal',           () => { const m = document.getElementById('modal'); if (m) m.hidden = true; }]
+];
+function backOpenLayer() {
+  for (const [id, close] of BACK_LAYERS) {
+    const e = document.getElementById(id);
+    if (e && e.classList.contains('open')) return close;
+  }
+  return null;
+}
+function backActiveScreen() { const s = document.querySelector('.screen.active'); return s ? s.id : 'screen-setup'; }
+function backAtRoot() { return !backOpenLayer() && backActiveScreen() === 'screen-setup'; }
+// One app entry is always kept on top, so every back press comes here first.
+function backSync() {
+  if (!(history.state && history.state.ayn)) { try { history.pushState({ ayn: 1 }, ''); } catch (e) {} }
+}
+let _backExitAt = 0;
+window.addEventListener('popstate', () => {
+  const close = backOpenLayer();
+  if (close) close();
+  else if (backAtRoot()) {
+    // Home with nothing open: press back twice to close the app.
+    if (Date.now() - _backExitAt < 2200) { history.back(); return; }
+    _backExitAt = Date.now();
+    showToast('Press back again to close the app');
+  } else {
+    const scr = backActiveScreen();
+    if (scr === 'screen-format') showScreen('screen-checklist');
+    else if (scr === 'screen-report') newInspection();
+    else if (scr === 'screen-checklist') goBack();          // asks first if work would be lost
+    else if (scr !== 'screen-setup') showScreen('screen-setup');
+  }
+  setTimeout(backSync, 0);                                    // still somewhere inside: keep the trap
+});
+window.addEventListener('load', () => setTimeout(backSync, 0));
+// Any tap may open a panel or change screen; re-check after it.
+document.addEventListener('click', () => setTimeout(backSync, 0), true);
+(function backHookShowScreen() {
+  const orig = window.showScreen;
+  if (typeof orig !== 'function' || orig.__back) return;
+  window.showScreen = function (id) { const r = orig.apply(this, arguments); setTimeout(backSync, 0); return r; };
+  window.showScreen.__back = true;
+})();
 
 </script>
 
