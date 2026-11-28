@@ -2224,7 +2224,7 @@ if ('serviceWorker' in navigator &&
 }
 
 // v45: version shown in Settings, and a manual "Check for updates".
-const APP_VERSION = '51';
+const APP_VERSION = '52';
 async function checkForUpdates() {
   const out = document.getElementById('updStat');
   const say = t => { if (out) out.textContent = t; };
@@ -5796,8 +5796,8 @@ function onFindKey(e) {
   } else if (e.key === 'Enter') {
     e.preventDefault();
     pickUnit(_suggList[_suggIdx >= 0 ? _suggIdx : 0].i);
-  } else if (e.key === 'Escape') {
-    box.classList.remove('open');
+  } else if (e.key === 'Escape' && typeof CloseWatcher !== 'function') {
+    box.classList.remove('open');               // v52: otherwise the back handler closes it
   }
 }
 
@@ -6786,7 +6786,8 @@ window.addEventListener('load', () => {
     if (!e.target.closest('.find-box')) closeSugg();
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && document.getElementById('settingsSheet').classList.contains('open')) closeSettings();
+    // v52: Escape is a close request; where CloseWatcher exists the back handler closes Settings.
+    if (e.key === 'Escape' && typeof CloseWatcher !== 'function' && document.getElementById('settingsSheet').classList.contains('open')) closeSettings();
   });
   renderUnitCard();
   loadAppSettings();        // v29: restore show-time + auto-save preferences
@@ -8625,6 +8626,7 @@ function forgetLearning() {
 // back leaves the app as usual.
 const BACK_LAYERS = [
   ['inappCamOverlay', () => closeInappCam()],
+  ['findSugg',        () => closeSugg()],
   ['pbPickerOverlay', () => { if (typeof closePbPicker === 'function') closePbPicker(); else document.getElementById('pbPickerOverlay').classList.remove('open'); }],
   ['photoBankModal',  () => closePhotoBank()],
   ['comboOverlay',    () => closeComboReport()],
@@ -8641,35 +8643,46 @@ function backOpenLayer() {
 }
 function backActiveScreen() { const s = document.querySelector('.screen.active'); return s ? s.id : 'screen-setup'; }
 function backAtRoot() { return !backOpenLayer() && backActiveScreen() === 'screen-setup'; }
-// v51: Chrome (and the installed Android app) skips any history entry an app adds
-// without a real tap first, so back would jump straight out. The guard entry is
-// therefore added only during a tap, and never added again after a back press:
-// the app steps forward onto the same entry instead.
-//   base entry (app start)  <-  guard entry {ayn:1}  (we normally sit here)
-// Back moves to base -> popstate -> we handle it -> history.forward() to the guard.
-let _backExitAt = 0, _backFwd = false, _backExitTimer = null, _backHasGuard = false;
+// v52: two routes to the Android back button, each covering the other's gap.
+//  1. CloseWatcher (Chrome 120+): Android back goes to the watcher first. One may
+//     be made without a tap, so back works even straight after a fingerprint unlock.
+//  2. History guard: Chrome skips history entries added without a real tap, so the
+//     guard {ayn:1} is added only during a tap and never re-added after a back
+//     press; the app steps forward onto it again instead.
+// At home, the first back warns and leaves nothing armed for 2.2 seconds, so the
+// second back closes the app.
+let _backHasGuard = false, _backIgnorePop = 0, _backExitWin = false, _backExitTimer = null, _cw = null;
+function cwArm() {
+  if (_cw || _backExitWin || typeof CloseWatcher !== 'function') return;
+  try { _cw = new CloseWatcher(); _cw.onclose = () => { _cw = null; backHandle(false); }; } catch (e) { _cw = null; }
+}
 function backSync() {
+  if (_backExitWin) return;
+  cwArm();
   if (history.state && history.state.ayn) return;
   if (!(navigator.userActivation && navigator.userActivation.isActive)) return;   // only during a tap
-  if (_backHasGuard && !history.state) {
-    // On the base entry with the guard already ahead of us: step onto it.
-    _backFwd = true; history.forward(); return;
-  }
+  if (_backHasGuard) { _backIgnorePop++; history.forward(); return; }           // guard is just ahead
   try { history.pushState({ ayn: 1 }, ''); _backHasGuard = true; } catch (e) {}
 }
-function backReturn() { if (!_backHasGuard) return; _backFwd = true; history.forward(); }
-window.addEventListener('popstate', () => {
-  if (_backFwd) { _backFwd = false; if (history.state && history.state.ayn) return; }
-  if (history.state && history.state.ayn) return;            // arrived on the guard some other way
+function backReturn() {            // after handling a back press that moved history: step onto the guard again
+  if (_backHasGuard && !history.state) { _backIgnorePop++; history.forward(); }
+  cwArm();
+}
+function backEndExitWindow() {
+  clearTimeout(_backExitTimer); _backExitTimer = null;
+  if (!_backExitWin) return;
+  _backExitWin = false; backReturn();
+}
+function backHandle(fromHistory) {
   const close = backOpenLayer();
-  if (close) { close(); backReturn(); return; }
+  if (close) { close(); if (fromHistory) backReturn(); else cwArm(); return; }
   if (backAtRoot()) {
-    // Home with nothing open: first press warns and stays on the base entry,
-    // so a second press within 2 seconds leaves the app.
-    _backExitAt = Date.now();
     showToast('Press back again to close the app');
+    _backExitWin = true;
+    // Stand on the first entry with nothing armed: the next back leaves the app.
+    if (history.state && history.state.ayn) { _backIgnorePop++; history.back(); }
     clearTimeout(_backExitTimer);
-    _backExitTimer = setTimeout(() => { if (!history.state) backReturn(); }, 2200);
+    _backExitTimer = setTimeout(backEndExitWindow, 2200);
     return;
   }
   const scr = backActiveScreen();
@@ -8677,10 +8690,17 @@ window.addEventListener('popstate', () => {
   else if (scr === 'screen-report') newInspection();
   else if (scr === 'screen-checklist') goBack();          // asks first if work would be lost
   else if (scr !== 'screen-setup') showScreen('screen-setup');
-  backReturn();
+  if (fromHistory) backReturn(); else cwArm();
+}
+window.addEventListener('popstate', () => {
+  if (_backIgnorePop > 0) { _backIgnorePop--; return; }
+  if (history.state && history.state.ayn) return;          // arrived on the guard some other way
+  if (_backExitWin) return;                                 // already warned, standing on the first entry
+  backHandle(true);
 });
-// Any tap may open a panel or change screen; re-check after it.
-document.addEventListener('click', () => setTimeout(backSync, 0), true);
+window.addEventListener('load', () => setTimeout(cwArm, 0));
+// Any tap ends the "press again" window and re-arms both routes.
+document.addEventListener('click', () => { if (_backExitWin) backEndExitWindow(); setTimeout(backSync, 0); }, true);
 (function backHookShowScreen() {
   const orig = window.showScreen;
   if (typeof orig !== 'function' || orig.__back) return;
@@ -8771,7 +8791,7 @@ async function lockDisable() {
   Object.keys(SECRET_PLAIN).forEach(n => { if (vaultMem[n]) localStorage.setItem(SECRET_PLAIN[n], vaultMem[n]); });
   localStorage.removeItem(LOCK_CFG); localStorage.removeItem(LOCK_VAULT);
   await keyDel('dev');
-  vaultMem = null; _vaultKey = null;
+  vaultMem = null; _vaultKey = null; lockSessClear();
 }
 
 // ── fingerprint (WebAuthn platform authenticator, checked on this phone)
@@ -8891,19 +8911,53 @@ function lockAfterUnlock(mode) {
 async function lockForgot() {
   if (!confirm('Reset app lock?\n\nYour reports stay. Your saved signature and the dashboard code are erased: draw the signature again and paste the PHONE code again.')) return;
   localStorage.removeItem(LOCK_CFG); localStorage.removeItem(LOCK_VAULT); await keyDel('dev');
-  vaultMem = null; _vaultKey = null; lockHide(); renderLockSettings();
+  vaultMem = null; _vaultKey = null; lockSessClear(); lockHide(); renderLockSettings();
   showToast('App lock removed. Set your signature and dashboard code again.');
 }
-function lockMarkActive() { _hiddenAt = 0; }
-function lockNow() { if (!lockOn()) return; vaultMem = null; _vaultKey = null; lockShow('unlock'); }
+function lockMarkActive() { _hiddenAt = 0; lockSessSave(); }
+// v52: a refresh or an app update within 5 minutes of use does not lock again.
+// The vault key is wrapped with a session key that cannot be read out of the
+// browser; the wrapped copy lives in sessionStorage, which ends when the app is closed.
+const LOCK_SESS = 'aynLockSess';
+async function lockSessSave() {
+  try {
+    if (!_vaultKey || !lockOn()) return;
+    let k = await keyGet('sess');
+    if (!k) { k = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['wrapKey', 'unwrapKey']); await keyPut('sess', k); }
+    sessionStorage.setItem(LOCK_SESS, JSON.stringify({ t: Date.now(), w: await wrapWith(k, _vaultKey) }));
+  } catch (e) {}
+}
+function lockSessTouch() {
+  try { const v = JSON.parse(sessionStorage.getItem(LOCK_SESS) || 'null'); if (v && _vaultKey) { v.t = Date.now(); sessionStorage.setItem(LOCK_SESS, JSON.stringify(v)); } } catch (e) {}
+}
+function lockSessClear() { try { sessionStorage.removeItem(LOCK_SESS); } catch (e) {} }
+async function lockSessResume() {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(LOCK_SESS) || 'null');
+    if (!v || Date.now() - v.t > LOCK_AWAY_MS) return false;
+    const k = await keyGet('sess'); if (!k) return false;
+    const key = await unwrapWith(k, v.w);
+    vaultMem = await openVault(key); _vaultKey = key;
+    return true;
+  } catch (e) { return false; }
+}
+setInterval(() => { if (!document.hidden) lockSessTouch(); }, 20000);
+addEventListener('pagehide', lockSessTouch);
+function lockNow() { if (!lockOn()) return; vaultMem = null; _vaultKey = null; lockSessClear(); lockShow('unlock'); }
 
 // Lock at start, and after 5 minutes in the background.
 document.addEventListener('visibilitychange', () => {
   if (!lockOn()) return;
-  if (document.hidden) _hiddenAt = Date.now();
+  if (document.hidden) { _hiddenAt = Date.now(); lockSessTouch(); }
   else if (_hiddenAt && Date.now() - _hiddenAt > LOCK_AWAY_MS) lockNow();
 });
-if (lockOn()) lockShow('unlock');
+if (lockOn()) {
+  document.body.classList.add('locked');                    // hide content until we know
+  lockSessResume().then(ok => {
+    if (ok) { document.body.classList.remove('locked'); lockMarkActive(); lockAfterUnlock('unlock'); }
+    else lockShow('unlock');
+  });
+}
 
 // ── Settings
 function renderLockSettings() {
